@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "lib": ["DOM", "ESNext"],
+    "moduleResolution": "node",
+    "jsx": "react-native",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "baseUrl": "./mobile",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": [
+    "mobile/**/*.ts",
+    "mobile/**/*.tsx"
+  ],
+  "exclude": [
+    "mobile/node_modules",
+    "backend"
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "Persona AI",
+    "slug": "persona-ai",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "persona",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.persona.ai",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Persona requires microphone access for voice messages and live duplex audio calls with your companion."
+      }
+    },
+    "android": {
+      "package": "com.persona.ai",
+      "permissions": [
+        "RECORD_AUDIO"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-asset",
+      "expo-secure-store",
+      "expo-audio"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

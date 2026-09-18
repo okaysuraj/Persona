@@ -1,0 +1,110 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-serif: "Newsreader", Georgia, serif;
+  --font-mono: "Geist Mono", monospace;
+
+  --color-canvas: #FAF8F5;
+  --color-canvas-dark: #121211;
+  --color-card-light: #FFFFFF;
+  --color-card-dark: #191817;
+  --color-border-light: #E7E3DC;
+  --color-border-dark: #2A2826;
+
+  --color-terracotta-50: #FCF4F0;
+  --color-terracotta-100: #F7E4DC;
+  --color-terracotta-500: #C85A32;
+  --color-terracotta-600: #B34B24;
+  --color-terracotta-700: #943A18;
+}
+
+:root {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  color-scheme: light dark;
+}
+
+/* Custom base typography */
+body {
+  font-family: var(--font-sans);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Big editorial headings */
+.font-display {
+  font-family: var(--font-sans);
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+}
+
+.font-editorial {
+  font-family: var(--font-serif);
+  letter-spacing: -0.02em;
+}
+
+/* Tactile button micro-physics (Emil Kowalski directive) */
+button, [role="button"] {
+  transition: transform 160ms var(--ease-out), background-color 160ms var(--ease-out), border-color 160ms var(--ease-out), opacity 160ms var(--ease-out);
+}
+
+button:active:not(:disabled), [role="button"]:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* Keystroke badges per minimalist-ui */
+kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  padding: 0.125rem 0.375rem;
+  border-radius: 4px;
+  border: 1px solid var(--color-border-light);
+  background-color: #F4F1EC;
+  color: #55524E;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
+}
+
+.dark kbd {
+  border-color: var(--color-border-dark);
+  background-color: #211F1D;
+  color: #A39E96;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+}
+
+/* Subtle custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(180, 175, 168, 0.35);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(180, 175, 168, 0.6);
+}
+
+/* Pulse animation for voice orb */
+@keyframes ambientGlow {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.75;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.95;
+  }
+}
+
+.animate-ambient-glow {
+  animation: ambientGlow 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
