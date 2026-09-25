@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Colors, BorderRadius, Spacing, Typography } from '../../constants/theme';
 import { Message } from '../../store/companionStore';
+import { getAvatarSource } from '../../utils/avatar';
 
 interface ChatBubbleProps {
   message: Message;
@@ -34,32 +36,50 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
     );
   }
 
-  // AI Dialogue: Editorial, literary presentation with spacious typography
+  // AI Companion Dialogue: Editorial, spacious, warm typography
   return (
     <View style={styles.assistantEntry}>
-      {/* Speaker Header with Character Presence */}
+      {/* Speaker Header with Character Avatar & Name */}
       <View style={styles.speakerRow}>
-        {companionAvatar ? (
-          <Image source={{ uri: companionAvatar }} style={styles.speakerAvatar} />
-        ) : null}
+        <View style={styles.avatarContainer}>
+          <Image
+            source={getAvatarSource(companionAvatar)}
+            style={styles.speakerAvatar}
+          />
+          <View style={styles.onlineDot} />
+        </View>
+
         <Text style={styles.speakerLabel}>{companionName.toUpperCase()}</Text>
 
         {message.thought_trace ? (
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={toggleThought}
-            style={styles.thoughtToggle}
+            style={[styles.thoughtToggle, showThought && styles.thoughtToggleActive]}
           >
-            <Text style={styles.thoughtToggleText}>
-              {showThought ? 'Close reflection' : 'Reflection'}
+            <Feather
+              name={showThought ? 'eye-off' : 'cpu'}
+              size={11}
+              color={showThought ? Colors.terracotta : Colors.textMuted}
+            />
+            <Text
+              style={[
+                styles.thoughtToggleText,
+                showThought && { color: Colors.terracotta },
+              ]}
+            >
+              {showThought ? 'Close inner monologue' : 'Inner monologue'}
             </Text>
           </TouchableOpacity>
         ) : null}
       </View>
 
-      {/* Inner Reflection (Quiet, non-intrusive) */}
+      {/* Cognitive Inner Monologue Box */}
       {showThought && message.thought_trace ? (
         <View style={styles.thoughtContainer}>
+          <View style={styles.thoughtHeader}>
+            <Text style={styles.thoughtSuperLabel}>COGNITIVE APPRAISAL</Text>
+          </View>
           <Text style={styles.thoughtText}>{message.thought_trace}</Text>
         </View>
       ) : null}
@@ -67,7 +87,11 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
       {/* Snapshot / Media if present */}
       {message.media_type === 'selfie' && message.media_url ? (
         <View style={styles.mediaContainer}>
-          <Image source={{ uri: message.media_url }} style={styles.mediaImage} resizeMode="cover" />
+          <Image
+            source={getAvatarSource(message.media_url)}
+            style={styles.mediaImage}
+            resizeMode="cover"
+          />
         </View>
       ) : null}
 
@@ -80,34 +104,34 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
 };
 
 const styles = StyleSheet.create({
-  // User dialogue: Visually quiet, indented, subtle
+  // User dialogue: Clean, right-aligned, elevated surface
   userEntry: {
     alignSelf: 'flex-end',
-    maxWidth: '82%',
+    maxWidth: '85%',
     marginTop: Spacing.md,
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.md,
   },
   userSpeakerLabel: {
-    fontSize: Typography.metadata,
-    letterSpacing: 1.8,
+    fontSize: 10,
+    letterSpacing: 1.6,
     color: Colors.textMuted,
-    fontWeight: '500',
+    fontWeight: '600',
     textAlign: 'right',
-    marginBottom: 6,
+    marginBottom: 5,
   },
   userContentSurface: {
-    backgroundColor: 'rgba(255, 255, 255, 0.035)',
+    backgroundColor: '#1E1D1B',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     borderRadius: BorderRadius.md,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
   userText: {
-    fontSize: Typography.userResponse, // 16px
-    lineHeight: Typography.lineHeight.userResponse, // 24px
-    color: Colors.textSecondary,
-    letterSpacing: 0.2,
+    fontSize: 15,
+    lineHeight: 22,
+    color: '#F5F2EC',
+    letterSpacing: 0.1,
   },
 
   // Assistant dialogue: Editorial, spacious, character-first
@@ -115,64 +139,96 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     width: '100%',
     marginTop: Spacing.md,
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.lg,
   },
   speakerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
+  },
+  avatarContainer: {
+    position: 'relative',
+    marginRight: 8,
   },
   speakerAvatar: {
-    width: 26,
-    height: 26,
-    borderRadius: BorderRadius.sm,
-    marginRight: 10,
-    opacity: 0.88,
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  onlineDot: {
+    position: 'absolute',
+    bottom: -1,
+    right: -1,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.online,
+    borderWidth: 1.5,
+    borderColor: '#121211',
   },
   speakerLabel: {
-    fontSize: Typography.metadata, // 12px
-    letterSpacing: 2.0,
+    fontSize: 11,
+    letterSpacing: 1.6,
     color: Colors.textMuted,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   thoughtToggle: {
     marginLeft: 'auto',
-    paddingVertical: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 3,
     paddingHorizontal: 8,
     backgroundColor: 'rgba(255, 255, 255, 0.04)',
     borderRadius: BorderRadius.xs,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: 'rgba(255, 255, 255, 0.07)',
+  },
+  thoughtToggleActive: {
+    backgroundColor: 'rgba(200, 90, 50, 0.12)',
+    borderColor: 'rgba(200, 90, 50, 0.3)',
   },
   thoughtToggleText: {
-    fontSize: 11,
+    fontSize: 10,
     color: Colors.textMuted,
-    letterSpacing: 0.8,
+    letterSpacing: 0.6,
+    fontWeight: '600',
   },
   thoughtContainer: {
     marginBottom: Spacing.md,
     paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderLeftWidth: 1.5,
-    borderLeftColor: Colors.textMuted,
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    paddingHorizontal: 12,
+    borderLeftWidth: 2,
+    borderLeftColor: Colors.terracotta,
+    backgroundColor: 'rgba(200, 90, 50, 0.05)',
     borderRadius: BorderRadius.xs,
   },
+  thoughtHeader: {
+    marginBottom: 4,
+  },
+  thoughtSuperLabel: {
+    fontSize: 9,
+    letterSpacing: 1.4,
+    color: Colors.terracotta,
+    fontWeight: '700',
+  },
   thoughtText: {
-    fontSize: 14,
-    lineHeight: 22,
+    fontSize: 12,
+    lineHeight: 18,
     fontStyle: 'italic',
-    color: Colors.textMuted,
+    color: Colors.textSecondary,
   },
   dialogueContainer: {
     paddingLeft: 2,
     paddingRight: Spacing.md,
   },
   dialogueText: {
-    fontSize: Typography.aiResponse, // 18px
-    lineHeight: Typography.lineHeight.aiResponse, // 28px
-    color: Colors.text, // Warm primary #F0EDE4
-    letterSpacing: 0.3,
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#F5F2EC',
+    letterSpacing: 0.1,
   },
   mediaContainer: {
     borderRadius: BorderRadius.md,

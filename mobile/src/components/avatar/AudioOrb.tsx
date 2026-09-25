@@ -110,7 +110,7 @@ export const AudioOrb: React.FC<AudioOrbProps> = ({ isSpeaking = false, size = 1
         ]}
       >
         <LinearGradient
-          colors={['#047857', '#10B981', '#E11D48']}
+          colors={['#C85A32', '#E0A34E', '#B34B24']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={[styles.gradient, { borderRadius: halfSize }]}
@@ -128,11 +128,11 @@ const styles = StyleSheet.create({
   ring: {
     position: 'absolute',
     borderWidth: 2,
-    borderColor: Colors.primary,
-    backgroundColor: 'rgba(16, 185, 129, 0.08)',
+    borderColor: Colors.terracotta,
+    backgroundColor: 'rgba(200, 90, 50, 0.08)',
   },
   orb: {
-    shadowColor: Colors.primary,
+    shadowColor: Colors.terracotta,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.85,
     shadowRadius: 32,

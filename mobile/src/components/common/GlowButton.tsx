@@ -1,5 +1,13 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle, ActivityIndicator, View } from 'react-native';
+import {
+  TouchableOpacity,
+  Text,
+  StyleSheet,
+  ViewStyle,
+  TextStyle,
+  ActivityIndicator,
+  View,
+} from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Colors, BorderRadius, Spacing } from '../../constants/theme';
 
@@ -9,7 +17,18 @@ interface GlowButtonProps {
   style?: ViewStyle;
   textStyle?: TextStyle;
   icon?: React.ReactNode;
-  variant?: 'primary' | 'romantic' | 'secondary' | 'ochre' | 'forest' | 'burgundy' | 'ghost';
+  trailingIcon?: React.ReactNode;
+  variant?:
+    | 'primary'
+    | 'terracotta'
+    | 'secondary'
+    | 'ghost'
+    | 'danger'
+    | 'romantic'
+    | 'forest'
+    | 'burgundy'
+    | 'ochre';
+  size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
   disabled?: boolean;
 }
@@ -20,7 +39,9 @@ export const GlowButton: React.FC<GlowButtonProps> = ({
   style,
   textStyle,
   icon,
-  variant = 'forest',
+  trailingIcon,
+  variant = 'terracotta',
+  size = 'md',
   loading = false,
   disabled = false,
 }) => {
@@ -31,16 +52,30 @@ export const GlowButton: React.FC<GlowButtonProps> = ({
   };
 
   const getBackgroundColor = () => {
-    if (variant === 'burgundy' || variant === 'romantic') return Colors.burgundy;
-    if (variant === 'ochre') return Colors.ochre;
-    if (variant === 'secondary' || variant === 'ghost') return 'rgba(255, 255, 255, 0.05)';
-    return Colors.forestGreen; // Default: Deep forest green
+    if (variant === 'secondary') return 'rgba(255, 255, 255, 0.05)';
+    if (variant === 'ghost') return 'transparent';
+    if (variant === 'danger') return 'rgba(200, 90, 50, 0.2)';
+    if (variant === 'ochre') return Colors.amber;
+    // Primary / Terracotta / Default
+    return Colors.terracotta; // #C85A32
   };
 
   const getBorderColor = () => {
-    if (variant === 'secondary' || variant === 'ghost') return Colors.glassBorder;
-    return 'rgba(255, 255, 255, 0.08)';
+    if (variant === 'secondary') return 'rgba(255, 255, 255, 0.09)';
+    if (variant === 'ghost') return 'transparent';
+    if (variant === 'danger') return 'rgba(200, 90, 50, 0.4)';
+    return 'rgba(255, 255, 255, 0.1)';
   };
+
+  const getTextColor = () => {
+    if (variant === 'secondary') return Colors.text;
+    if (variant === 'ghost') return Colors.textSecondary;
+    if (variant === 'danger') return '#FF7A59';
+    return '#FFFFFF';
+  };
+
+  const isSmall = size === 'sm';
+  const isLarge = size === 'lg';
 
   return (
     <TouchableOpacity
@@ -52,19 +87,28 @@ export const GlowButton: React.FC<GlowButtonProps> = ({
         {
           backgroundColor: getBackgroundColor(),
           borderColor: getBorderColor(),
+          paddingVertical: isSmall ? 8 : isLarge ? 16 : 12,
+          paddingHorizontal: isSmall ? 14 : isLarge ? 24 : 18,
         },
         disabled && styles.disabled,
         style,
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={Colors.text} size="small" />
+        <ActivityIndicator color={getTextColor()} size="small" />
       ) : (
         <View style={styles.contentRow}>
-          {icon}
-          <Text style={[styles.text, icon ? { marginLeft: Spacing.sm } : null, textStyle]}>
+          {icon && <View style={styles.leadingIcon}>{icon}</View>}
+          <Text
+            style={[
+              styles.text,
+              { color: getTextColor(), fontSize: isSmall ? 13 : 15 },
+              textStyle,
+            ]}
+          >
             {title}
           </Text>
+          {trailingIcon && <View style={styles.trailingIcon}>{trailingIcon}</View>}
         </View>
       )}
     </TouchableOpacity>
@@ -73,10 +117,8 @@ export const GlowButton: React.FC<GlowButtonProps> = ({
 
 const styles = StyleSheet.create({
   button: {
-    borderRadius: BorderRadius.md, // Soft 14px corner
+    borderRadius: BorderRadius.md, // 16px
     borderWidth: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -85,11 +127,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  leadingIcon: {
+    marginRight: 8,
+  },
+  trailingIcon: {
+    marginLeft: 8,
+  },
   text: {
-    color: Colors.text,
-    fontSize: 16,
     fontWeight: '600',
-    letterSpacing: 0.4,
+    letterSpacing: 0.3,
   },
   disabled: {
     opacity: 0.45,

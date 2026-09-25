@@ -1,4 +1,4 @@
-export type Archetype = 'confidant' | 'companion' | 'mentor' | 'philosopher' | 'artist';
+export type Archetype = 'confidant' | 'companion' | 'mentor' | 'philosopher' | 'artist' | 'friend' | 'soulmate';
 
 export type RelationshipStage =
   | 'Acquaintance'

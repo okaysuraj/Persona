@@ -15,7 +15,7 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: 'rgba(13, 16, 14, 0.94)',
+          backgroundColor: '#161514',
           borderTopColor: 'rgba(255, 255, 255, 0.08)',
           borderTopWidth: 1,
           height: tabHeight,
@@ -23,12 +23,12 @@ export default function TabLayout() {
           paddingTop: 8,
           elevation: 0,
         },
-        tabBarActiveTintColor: Colors.text,
+        tabBarActiveTintColor: Colors.terracotta,
         tabBarInactiveTintColor: Colors.textMuted,
         tabBarLabelStyle: {
           fontSize: 10,
           fontWeight: '600',
-          letterSpacing: 1.2,
+          letterSpacing: 1.0,
           textTransform: 'uppercase',
           marginTop: 2,
         },
@@ -37,9 +37,9 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Presence',
+          title: 'Companions',
           tabBarIcon: ({ color, size }) => (
-            <Feather name="compass" size={18} color={color} />
+            <Feather name="users" size={18} color={color} />
           ),
         }}
       />
@@ -55,9 +55,9 @@ export default function TabLayout() {
       <Tabs.Screen
         name="memory"
         options={{
-          title: 'Journal',
+          title: 'Vault',
           tabBarIcon: ({ color, size }) => (
-            <Feather name="bookmark" size={18} color={color} />
+            <Feather name="book-open" size={18} color={color} />
           ),
         }}
       />

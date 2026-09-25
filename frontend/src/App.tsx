@@ -18,7 +18,14 @@ export function App() {
   const [currentView, setCurrentView] = useState<'roster' | 'chat'>('roster');
   const [isVaultOpen, setIsVaultOpen] = useState(false);
   const [isVoiceOpen, setIsVoiceOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('persona_theme');
+      return saved ? saved === 'dark' : true;
+    } catch {
+      return true;
+    }
+  });
 
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingToken, setStreamingToken] = useState('');
@@ -27,8 +34,14 @@ export function App() {
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
+      try {
+        localStorage.setItem('persona_theme', 'dark');
+      } catch {}
     } else {
       document.documentElement.classList.remove('dark');
+      try {
+        localStorage.setItem('persona_theme', 'light');
+      } catch {}
     }
   }, [isDarkMode]);
 

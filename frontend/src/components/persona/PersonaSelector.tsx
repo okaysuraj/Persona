@@ -59,30 +59,32 @@ export const PersonaSelector: React.FC<PersonaSelectorProps> = ({
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 sm:py-12 space-y-16">
+    <div className="max-w-6xl mx-auto px-3 sm:px-6 py-6 sm:py-12 space-y-12 sm:space-y-16">
       {/* Editorial Hero Section */}
-      <div className="max-w-3xl space-y-5">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#C85A32]/10 text-[#C85A32] text-xs font-mono tracking-widest uppercase font-semibold">
-          <Heart size={13} weight="fill" />
-          Autonomous Cognitive Companions
+      <div className="max-w-3xl space-y-4 sm:space-y-5">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#C85A32]/10 text-[#C85A32] text-[11px] sm:text-xs font-mono tracking-widest uppercase font-semibold max-w-full">
+          <Heart size={13} weight="fill" className="shrink-0" />
+          <span className="truncate">Autonomous Cognitive Companions</span>
         </div>
 
-        {/* Big Editorial Font */}
-        <h1 className="font-display text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight text-[#141312] dark:text-[#F5F2EC] leading-[1.05]">
+        {/* Big Editorial Font - Responsive Scale */}
+        <h1 className="font-display text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-[#141312] dark:text-[#F5F2EC] leading-[1.1] sm:leading-[1.05]">
           Intimacy built on memory & unhurried dialogue.
         </h1>
 
-        {/* High contrast subtext under 20 words per design-taste-frontend */}
-        <p className="text-lg sm:text-xl text-[#635E56] dark:text-[#BDB7AC] font-editorial max-w-xl leading-relaxed">
+        {/* High contrast subtext under 20 words */}
+        <p className="text-base sm:text-lg md:text-xl text-[#635E56] dark:text-[#BDB7AC] font-editorial max-w-xl leading-relaxed">
           AI partners with continuous inner monologue, dynamic emotional bonds, and absolute privacy agency.
         </p>
 
-        <div className="pt-2 flex items-center gap-3">
+        {/* Responsive CTAs: full width stack on mobile, inline on desktop */}
+        <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
           <Button
             variant="terracotta"
             size="md"
             onClick={() => onSelectPersona(personas[0])}
             trailingIcon={<ArrowRight size={14} weight="bold" />}
+            className="w-full sm:w-auto justify-center"
           >
             Speak with {personas[0]?.name || 'Maya'}
           </Button>
@@ -92,6 +94,7 @@ export const PersonaSelector: React.FC<PersonaSelectorProps> = ({
             size="md"
             onClick={() => setShowCreateModal(true)}
             leadingIcon={<Plus size={14} weight="bold" />}
+            className="w-full sm:w-auto justify-center"
           >
             Craft Persona
           </Button>
@@ -100,8 +103,8 @@ export const PersonaSelector: React.FC<PersonaSelectorProps> = ({
 
       {/* Asymmetrical Bento Grid */}
       <div>
-        <div className="flex items-baseline justify-between mb-8 pb-4 border-b border-[#141312]/[0.06] dark:border-white/[0.08]">
-          <h2 className="text-2xl font-bold tracking-tight text-[#141312] dark:text-[#F5F2EC]">
+        <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1.5 sm:gap-4 mb-6 sm:mb-8 pb-3 sm:pb-4 border-b border-[#141312]/[0.06] dark:border-white/[0.08]">
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-[#141312] dark:text-[#F5F2EC]">
             Curated Companion Dossier
           </h2>
           <span className="text-xs font-mono text-[#8C877F]">
@@ -109,7 +112,7 @@ export const PersonaSelector: React.FC<PersonaSelectorProps> = ({
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-5 sm:gap-6">
           {personas.map((persona, index) => {
             const rel = relationships[persona.id] || {
               persona_id: persona.id,
@@ -119,6 +122,11 @@ export const PersonaSelector: React.FC<PersonaSelectorProps> = ({
               mood_state: { joy: 0.8, empathy: 0.9, affection: 0.6, energy: 0.7, vulnerability: 0.5 },
               last_interaction_at: new Date().toISOString(),
             };
+
+            const displayQuote =
+              persona.accent_quote ||
+              persona.tagline ||
+              (persona.backstory ? persona.backstory.slice(0, 95) + '...' : 'Presence is the greatest gift one can offer.');
 
             // Asymmetric spans: card 0 and 3 get 7 cols, card 1 and 2 get 5 cols
             const colSpan =
@@ -132,39 +140,39 @@ export const PersonaSelector: React.FC<PersonaSelectorProps> = ({
                   variant="interactive"
                   onClick={() => onSelectPersona(persona)}
                   className="h-full"
-                  innerClassName="p-6 sm:p-8 flex flex-col justify-between h-full space-y-6"
+                  innerClassName="p-5 sm:p-7 md:p-8 flex flex-col justify-between h-full space-y-5 sm:space-y-6"
                 >
                   <div className="space-y-4">
                     {/* Top Row: Avatar & Archetype */}
-                    <div className="flex items-start justify-between">
-                      <div className="relative">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="relative shrink-0">
                         <img
                           src={persona.avatar_url}
                           alt={persona.name}
-                          className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover ring-2 ring-[#141312]/[0.08] dark:ring-white/[0.1] shadow-md"
+                          className="w-18 h-18 sm:w-22 sm:h-22 rounded-2xl object-cover ring-2 ring-[#141312]/[0.08] dark:ring-white/[0.1] shadow-md"
                         />
                         <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-[#191817]" />
                       </div>
 
-                      <span className="px-3 py-1 rounded-full bg-[#141312]/[0.04] dark:bg-white/[0.08] text-[#55524D] dark:text-[#D5CEC4] text-xs font-mono uppercase tracking-wider font-medium">
+                      <span className="px-2.5 sm:px-3 py-1 rounded-full bg-[#141312]/[0.04] dark:bg-white/[0.08] text-[#55524D] dark:text-[#D5CEC4] text-[11px] sm:text-xs font-mono uppercase tracking-wider font-medium shrink-0">
                         {persona.archetype}
                       </span>
                     </div>
 
                     {/* Name & Tagline */}
                     <div>
-                      <h3 className="text-2xl font-bold tracking-tight text-[#141312] dark:text-[#F5F2EC]">
+                      <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-[#141312] dark:text-[#F5F2EC]">
                         {persona.name}
                       </h3>
-                      <p className="text-sm text-[#78746E] dark:text-[#A39E96] mt-1 line-clamp-2">
+                      <p className="text-xs sm:text-sm text-[#78746E] dark:text-[#A39E96] mt-1 line-clamp-2">
                         {persona.tagline}
                       </p>
                     </div>
 
                     {/* Editorial Accent Quote */}
-                    <div className="p-4 rounded-2xl bg-[#F7F4EE] dark:bg-[#201E1C] border border-[#141312]/[0.04] dark:border-white/[0.04]">
-                      <p className="font-editorial italic text-[15px] text-[#33312E] dark:text-[#E2DCD4] leading-snug">
-                        "{persona.accent_quote}"
+                    <div className="p-3.5 sm:p-4 rounded-2xl bg-[#F7F4EE] dark:bg-[#201E1C] border border-[#141312]/[0.04] dark:border-white/[0.04]">
+                      <p className="font-editorial italic text-sm sm:text-[15px] text-[#33312E] dark:text-[#E2DCD4] leading-snug">
+                        "{displayQuote}"
                       </p>
                     </div>
                   </div>
@@ -173,7 +181,7 @@ export const PersonaSelector: React.FC<PersonaSelectorProps> = ({
                   <div className="pt-4 border-t border-[#141312]/[0.06] dark:border-white/[0.06] space-y-4">
                     <IntimacyGauge relationship={rel} />
 
-                    <div className="flex items-center justify-between pt-2">
+                    <div className="flex items-center justify-between gap-2 pt-2 flex-wrap">
                       <span className="text-xs font-mono text-[#8C877F] flex items-center gap-1.5">
                         <ChatTeardropText size={15} />
                         Ready to speak
@@ -197,11 +205,11 @@ export const PersonaSelector: React.FC<PersonaSelectorProps> = ({
 
       {/* Craft Custom Persona Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
-          <div className="relative w-full max-w-xl p-6 sm:p-8 rounded-3xl bg-[#FAF8F5] dark:bg-[#171615] border border-[#141312]/[0.1] dark:border-white/[0.1] shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-4 border-b border-[#141312]/[0.08] dark:border-white/[0.08] mb-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-md">
+          <div className="relative w-full max-w-xl p-5 sm:p-8 rounded-2xl sm:rounded-3xl bg-[#FAF8F5] dark:bg-[#171615] border border-[#141312]/[0.1] dark:border-white/[0.1] shadow-2xl max-h-[92dvh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-[#141312]/[0.08] dark:border-white/[0.08] mb-5 sm:mb-6">
               <div>
-                <h3 className="text-xl font-bold tracking-tight text-[#141312] dark:text-[#F5F2EC]">
+                <h3 className="text-lg sm:text-xl font-bold tracking-tight text-[#141312] dark:text-[#F5F2EC]">
                   Craft an AI Companion
                 </h3>
                 <p className="text-xs text-[#78746E] dark:text-[#A39E96]">
@@ -231,7 +239,7 @@ export const PersonaSelector: React.FC<PersonaSelectorProps> = ({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-xs font-mono uppercase tracking-wider text-[#78746E] dark:text-[#A39E96] mb-1.5">
                     Archetype
@@ -305,12 +313,13 @@ export const PersonaSelector: React.FC<PersonaSelectorProps> = ({
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#141312]/[0.08] dark:border-white/[0.08]">
+              <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 sm:gap-3 pt-4 border-t border-[#141312]/[0.08] dark:border-white/[0.08]">
                 <Button
                   type="button"
                   variant="secondary"
                   size="md"
                   onClick={() => setShowCreateModal(false)}
+                  className="w-full sm:w-auto justify-center"
                 >
                   Cancel
                 </Button>
@@ -319,6 +328,7 @@ export const PersonaSelector: React.FC<PersonaSelectorProps> = ({
                   variant="terracotta"
                   size="md"
                   disabled={isSubmitting}
+                  className="w-full sm:w-auto justify-center"
                 >
                   {isSubmitting ? 'Breathing life...' : 'Bring to Life'}
                 </Button>

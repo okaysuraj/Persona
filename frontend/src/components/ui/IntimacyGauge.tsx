@@ -11,7 +11,15 @@ export const IntimacyGauge: React.FC<IntimacyGaugeProps> = ({
   relationship,
   compact = false,
 }) => {
-  const { intimacy_level, stage, mood_state } = relationship;
+  const { intimacy_level = 20, stage, mood_state } = relationship;
+
+  // Normalize stage (handles 'acquaintance', 'close_friend', etc.)
+  const normalizedStage = stage
+    ? stage
+        .split('_')
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ')
+    : 'Friend';
 
   const stageBadgeColors: Record<string, string> = {
     Acquaintance: 'bg-[#EEF2F6] text-[#2C4C6F] dark:bg-[#1E293B] dark:text-[#93C5FD]',
@@ -19,19 +27,27 @@ export const IntimacyGauge: React.FC<IntimacyGaugeProps> = ({
     'Close Friend': 'bg-[#FBF3DB] text-[#956400] dark:bg-[#332A15] dark:text-[#FDE047]',
     Confidant: 'bg-[#FDEBEC] text-[#9F2F2D] dark:bg-[#381B1C] dark:text-[#FCA5A5]',
     'Romantic Companion': 'bg-[#FCF4F0] text-[#C85A32] dark:bg-[#381F17] dark:text-[#FDBA74]',
+    Romantic: 'bg-[#FCF4F0] text-[#C85A32] dark:bg-[#381F17] dark:text-[#FDBA74]',
   };
+
+  const badgeColor =
+    stageBadgeColors[normalizedStage] ||
+    stageBadgeColors['Friend'];
+
+  const joyVal = Math.round(Number(mood_state?.joy ?? 0.8) * 100);
+  const empathyVal = Math.round(Number(mood_state?.empathy ?? 0.85) * 100);
+  const affectionRaw = mood_state?.affection ?? (mood_state as any)?.flirt ?? 0.65;
+  const affectionVal = Math.round(Number(affectionRaw) * 100);
 
   if (compact) {
     return (
       <div className="flex items-center gap-2 text-xs font-mono">
         <span
-          className={`px-2 py-0.5 rounded-full text-[11px] uppercase tracking-wider font-semibold ${
-            stageBadgeColors[stage] || stageBadgeColors['Friend']
-          }`}
+          className={`px-2 py-0.5 rounded-full text-[11px] uppercase tracking-wider font-semibold ${badgeColor}`}
         >
-          {stage}
+          {normalizedStage}
         </span>
-        <div className="w-16 h-1.5 bg-[#E7E3DC] dark:bg-[#2A2826] rounded-full overflow-hidden">
+        <div className="w-14 sm:w-16 h-1.5 bg-[#E7E3DC] dark:bg-[#2A2826] rounded-full overflow-hidden">
           <div
             className="h-full bg-[#C85A32] rounded-full transition-all duration-500 ease-out"
             style={{ width: `${Math.min(100, Math.max(5, intimacy_level))}%` }}
@@ -56,11 +72,9 @@ export const IntimacyGauge: React.FC<IntimacyGaugeProps> = ({
           </span>
         </div>
         <span
-          className={`px-2.5 py-0.5 rounded-full text-xs font-mono uppercase tracking-wider font-medium ${
-            stageBadgeColors[stage] || stageBadgeColors['Friend']
-          }`}
+          className={`px-2.5 py-0.5 rounded-full text-xs font-mono uppercase tracking-wider font-medium ${badgeColor}`}
         >
-          {stage}
+          {normalizedStage}
         </span>
       </div>
 
@@ -84,13 +98,13 @@ export const IntimacyGauge: React.FC<IntimacyGaugeProps> = ({
       {mood_state && (
         <div className="pt-1 flex flex-wrap gap-1.5 text-[11px] font-mono">
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#EDF3EC] text-[#346538] dark:bg-[#1A261D] dark:text-[#86EFAC]">
-            <Sparkle size={10} weight="fill" /> Joy {Math.round(mood_state.joy * 100)}%
+            <Sparkle size={10} weight="fill" /> Joy {joyVal}%
           </span>
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#FBF3DB] text-[#956400] dark:bg-[#2B2313] dark:text-[#FDE047]">
-            Empathy {Math.round(mood_state.empathy * 100)}%
+            Empathy {empathyVal}%
           </span>
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#FDEBEC] text-[#9F2F2D] dark:bg-[#2C1819] dark:text-[#FCA5A5]">
-            Affection {Math.round(mood_state.affection * 100)}%
+            Affection {affectionVal}%
           </span>
         </div>
       )}

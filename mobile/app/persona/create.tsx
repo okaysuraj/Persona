@@ -11,26 +11,29 @@ import {
   Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { Colors, BorderRadius, Spacing, Typography } from '../../src/constants/theme';
+import { Colors, BorderRadius, Spacing } from '../../src/constants/theme';
 import { GlowButton } from '../../src/components/common/GlowButton';
 import { api } from '../../src/services/api';
 import { useCompanionStore } from '../../src/store/companionStore';
+import { getAvatarSource } from '../../src/utils/avatar';
 
 const PRESET_AVATARS = [
-  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800',
-  'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=800',
-  'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=800',
-  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800',
-  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=800',
+  '/avatars/maya.jpg',
+  '/avatars/soren.jpg',
+  '/avatars/elena.jpg',
+  '/avatars/kaelen.jpg',
 ];
 
 const ARCHETYPES = [
   { key: 'confidant', label: 'Confidant' },
-  { key: 'girlfriend', label: 'Companion' },
+  { key: 'companion', label: 'Companion' },
   { key: 'mentor', label: 'Mentor' },
-  { key: 'intellectual', label: 'Philosopher' },
-  { key: 'creative', label: 'Artist' },
+  { key: 'philosopher', label: 'Philosopher' },
+  { key: 'artist', label: 'Artist' },
+  { key: 'friend', label: 'Friend' },
+  { key: 'soulmate', label: 'Soulmate' },
 ];
 
 export default function CreatePersonaScreen() {
@@ -42,41 +45,50 @@ export default function CreatePersonaScreen() {
   const [archetype, setArchetype] = useState('confidant');
   const [gender, setGender] = useState('female');
   const [tagline, setTagline] = useState('');
+  const [accentQuote, setAccentQuote] = useState('');
   const [backstory, setBackstory] = useState('');
-  const [systemPrompt, setSystemPrompt] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState(PRESET_AVATARS[0]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleCreate = async () => {
-    if (!name || !backstory) {
-      setError('Please provide a name and backstory for this character.');
+    if (!name.trim() || !backstory.trim()) {
+      setError('Please provide a name and backstory for this companion.');
       return;
     }
     setLoading(true);
     setError('');
 
     try {
-      const newPersona = await api.createPersona({
-        name,
+      const newPersona = {
+        id: `custom-${Date.now()}`,
+        name: name.trim(),
         gender,
         archetype,
-        tagline: tagline || `A thoughtful ${archetype}`,
-        system_prompt:
-          systemPrompt ||
-          `You are ${name}, an attentive, emotionally supportive companion with the essence of ${archetype}. Always speak in character with warmth and genuine presence.`,
-        backstory,
+        tagline: tagline.trim() || `A thoughtful ${archetype}`,
+        accent_quote: accentQuote.trim() || 'Presence is the greatest gift one can offer.',
+        system_prompt: `You are ${name.trim()}, a thoughtful ${archetype}. Respond with gentle sincerity and warmth.`,
+        backstory: backstory.trim(),
         avatar_url: selectedAvatar,
-        voice_id: 'default_female_warm',
-        speech_style: { cadence: 'warm', tone: 'intimate' },
-      });
+        voice_id: 'default_warm',
+        speech_style: { warmth: 0.9, cadence: 'contemplative' },
+      };
 
-      await fetchPersonas();
+      try {
+        await api.createPersona(newPersona);
+      } catch (_) {
+        // Local persistence fallback
+      }
+
+      useCompanionStore.setState((state) => ({
+        personas: [newPersona, ...state.personas],
+      }));
       await setActivePersona(newPersona);
+
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
     } catch (err: any) {
-      setError(err.message || 'Failed to create character.');
+      setError(err.message || 'Failed to create companion.');
     } finally {
       setLoading(false);
     }
@@ -87,11 +99,23 @@ export default function CreatePersonaScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.container}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.superTitle}>CHARACTER ORIGIN</Text>
-          <Text style={styles.title}>Character Studio</Text>
-          <Text style={styles.subtitle}>Define an original presence and backstory</Text>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => router.back()}
+            style={styles.backButton}
+          >
+            <Feather name="chevron-left" size={20} color={Colors.text} />
+            <Text style={styles.backButtonText}>Cancel</Text>
+          </TouchableOpacity>
+
+          <View style={styles.titleGroup}>
+            <Text style={styles.superTitle}>CHARACTER ORIGIN</Text>
+            <Text style={styles.title}>Craft Companion</Text>
+            <Text style={styles.subtitle}>Define an original presence, tone, and backstory</Text>
+          </View>
         </View>
 
         {error ? (
@@ -100,7 +124,7 @@ export default function CreatePersonaScreen() {
           </View>
         ) : null}
 
-        {/* Avatar Preset Selector */}
+        {/* Visual Avatar Presets */}
         <Text style={styles.label}>VISUAL PORTRAIT</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.avatarRow}>
           {PRESET_AVATARS.map((url, i) => {
@@ -112,14 +136,14 @@ export default function CreatePersonaScreen() {
                 onPress={() => setSelectedAvatar(url)}
                 style={[styles.avatarChoice, isSelected && styles.avatarChoiceActive]}
               >
-                <Image source={{ uri: url }} style={styles.avatarImg} />
+                <Image source={getAvatarSource(url)} style={styles.avatarImg} />
               </TouchableOpacity>
             );
           })}
         </ScrollView>
 
         {/* Name Input */}
-        <Text style={styles.label}>CHARACTER NAME</Text>
+        <Text style={styles.label}>COMPANION NAME</Text>
         <View style={styles.inputWrapper}>
           <TextInput
             placeholder="e.g. Seraphina, Soren, Maya"
@@ -157,10 +181,22 @@ export default function CreatePersonaScreen() {
         <Text style={styles.label}>SHORT TAGLINE</Text>
         <View style={styles.inputWrapper}>
           <TextInput
-            placeholder="e.g. A quiet sanctuary from the noise of the world."
+            placeholder="A quiet essayist who listens to the spaces between words..."
             placeholderTextColor={Colors.textMuted}
             value={tagline}
             onChangeText={setTagline}
+            style={styles.input}
+          />
+        </View>
+
+        {/* Accent Quote */}
+        <Text style={styles.label}>ACCENT QUOTE</Text>
+        <View style={styles.inputWrapper}>
+          <TextInput
+            placeholder="Presence is the greatest gift one can offer."
+            placeholderTextColor={Colors.textMuted}
+            value={accentQuote}
+            onChangeText={setAccentQuote}
             style={styles.input}
           />
         </View>
@@ -181,10 +217,10 @@ export default function CreatePersonaScreen() {
 
         {/* Submit */}
         <GlowButton
-          title="Bring Character to Life"
+          title="Bring Companion to Life"
           onPress={handleCreate}
           loading={loading}
-          variant="forest"
+          variant="terracotta"
           style={styles.submitBtn}
         />
       </ScrollView>
@@ -195,7 +231,7 @@ export default function CreatePersonaScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background, // #121211
   },
   scrollContent: {
     paddingHorizontal: Spacing.md,
@@ -203,33 +239,45 @@ const styles = StyleSheet.create({
     paddingBottom: 60,
   },
   header: {
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.lg,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  backButtonText: {
+    color: Colors.text,
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  titleGroup: {
+    gap: 4,
   },
   superTitle: {
-    fontSize: Typography.metadata,
-    letterSpacing: 2.2,
-    color: Colors.textMuted,
-    fontWeight: '600',
-    marginBottom: 6,
+    fontSize: 10,
+    letterSpacing: 2.0,
+    color: Colors.terracotta,
+    fontWeight: '700',
   },
   title: {
-    fontSize: Typography.screenTitle, // 36px
-    lineHeight: Typography.lineHeight.screenTitle,
-    fontWeight: '400',
+    fontSize: 28,
+    fontWeight: '700',
     color: Colors.text,
-    letterSpacing: 0.3,
+    letterSpacing: -0.3,
   },
   subtitle: {
-    fontSize: 15,
+    fontSize: 14,
     color: Colors.textSecondary,
-    marginTop: 6,
+    marginTop: 2,
   },
   label: {
-    fontSize: Typography.metadata,
-    letterSpacing: 1.8,
+    fontSize: 11,
+    letterSpacing: 1.4,
     color: Colors.textMuted,
     fontWeight: '600',
-    marginTop: 20,
+    marginTop: 18,
     marginBottom: 8,
   },
   avatarRow: {
@@ -238,30 +286,30 @@ const styles = StyleSheet.create({
   },
   avatarChoice: {
     marginRight: 12,
-    borderRadius: BorderRadius.md,
-    padding: 2,
-    borderWidth: 1.5,
+    borderRadius: 18,
+    padding: 3,
+    borderWidth: 2,
     borderColor: 'transparent',
   },
   avatarChoiceActive: {
-    borderColor: Colors.text,
+    borderColor: Colors.terracotta,
   },
   avatarImg: {
     width: 64,
     height: 64,
-    borderRadius: BorderRadius.sm,
+    borderRadius: 14,
   },
   inputWrapper: {
-    backgroundColor: Colors.glass,
+    backgroundColor: '#191817',
     borderWidth: 1,
-    borderColor: Colors.glassBorder,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     borderRadius: BorderRadius.md,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
   input: {
     color: Colors.text,
-    fontSize: Typography.body, // 16px
+    fontSize: 15,
     lineHeight: 22,
   },
   archetypeGrid: {
@@ -270,34 +318,33 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   archetypeCard: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    borderRadius: BorderRadius.xs,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.06)',
   },
   archetypeCardActive: {
-    backgroundColor: Colors.forestGreen,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: Colors.terracotta,
+    borderColor: Colors.terracotta,
   },
   archetypeLabel: {
     color: Colors.textSecondary,
-    fontSize: 13,
+    fontSize: 12,
+    fontWeight: '600',
     letterSpacing: 0.6,
-    fontWeight: '500',
   },
   archetypeLabelActive: {
-    color: Colors.text,
-    fontWeight: '600',
+    color: '#FFF',
   },
   submitBtn: {
     marginTop: Spacing.xl,
   },
   errorBox: {
-    backgroundColor: 'rgba(90, 44, 42, 0.25)',
+    backgroundColor: 'rgba(200, 90, 50, 0.15)',
     borderWidth: 1,
-    borderColor: Colors.burgundy,
+    borderColor: Colors.terracotta,
     padding: 12,
     borderRadius: BorderRadius.sm,
     marginBottom: 16,

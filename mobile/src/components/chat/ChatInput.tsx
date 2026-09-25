@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { View, TextInput, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { Colors, BorderRadius, Spacing, Typography } from '../../constants/theme';
+import { Colors, BorderRadius, Spacing } from '../../constants/theme';
 
 interface ChatInputProps {
   onSend: (text: string) => void;
@@ -9,7 +10,11 @@ interface ChatInputProps {
   disabled?: boolean;
 }
 
-export const ChatInput: React.FC<ChatInputProps> = ({ onSend, onRequestPhoto, disabled = false }) => {
+export const ChatInput: React.FC<ChatInputProps> = ({
+  onSend,
+  onRequestPhoto,
+  disabled = false,
+}) => {
   const [text, setText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
 
@@ -31,10 +36,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, onRequestPhoto, di
     }
   };
 
+  const canSend = Boolean(text.trim()) && !disabled;
+
   return (
     <View style={styles.floatingWrapper}>
-      {/* Floating Translucent Glass Surface */}
-      <View style={styles.composerGlass}>
+      {/* Floating Card Surface */}
+      <View style={styles.composerCard}>
         <TextInput
           placeholder="Speak or write your thoughts..."
           placeholderTextColor={Colors.textMuted}
@@ -47,49 +54,59 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, onRequestPhoto, di
         />
 
         <View style={styles.bottomControlsRow}>
-          {/* Subtle Mic / Voice Trigger */}
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={handleVoiceToggle}
-            style={[styles.smallIconBtn, isRecording && styles.smallIconBtnActive]}
-          >
-            <Text style={[styles.controlGlyph, isRecording && { color: Colors.burgundy }]}>
-              {isRecording ? 'REC' : 'MIC'}
-            </Text>
-          </TouchableOpacity>
-
-          {/* Optional Photo Prompt Trigger */}
-          {onRequestPhoto ? (
+          <View style={styles.leftTools}>
+            {/* Mic / Voice Note Trigger */}
             <TouchableOpacity
               activeOpacity={0.7}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                onRequestPhoto();
-              }}
-              style={styles.smallIconBtn}
+              onPress={handleVoiceToggle}
+              style={[styles.smallIconBtn, isRecording && styles.smallIconBtnActive]}
             >
-              <Text style={styles.controlGlyph}>PORTRAIT</Text>
+              <Feather
+                name={isRecording ? 'radio' : 'mic'}
+                size={14}
+                color={isRecording ? Colors.terracotta : Colors.textMuted}
+              />
+              <Text
+                style={[
+                  styles.controlGlyph,
+                  isRecording && { color: Colors.terracotta },
+                ]}
+              >
+                {isRecording ? 'REC' : 'VOICE'}
+              </Text>
             </TouchableOpacity>
-          ) : null}
 
-          {/* Send Trigger */}
+            {/* Optional Photo / Portrait Prompt */}
+            {onRequestPhoto ? (
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  onRequestPhoto();
+                }}
+                style={styles.smallIconBtn}
+              >
+                <Feather name="camera" size={13} color={Colors.textMuted} />
+                <Text style={styles.controlGlyph}>PORTRAIT</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+
+          {/* Send Action Button */}
           <TouchableOpacity
             activeOpacity={0.75}
             onPress={handleSend}
-            disabled={!text.trim() || disabled}
+            disabled={!canSend}
             style={[
               styles.sendAction,
-              text.trim() ? styles.sendActionActive : styles.sendActionDisabled,
+              canSend ? styles.sendActionActive : styles.sendActionDisabled,
             ]}
           >
-            <Text
-              style={[
-                styles.sendActionText,
-                text.trim() ? { color: Colors.text } : { color: Colors.textMuted },
-              ]}
-            >
-              SEND
-            </Text>
+            <Feather
+              name="arrow-up"
+              size={15}
+              color={canSend ? '#FFFFFF' : Colors.textMuted}
+            />
           </TouchableOpacity>
         </View>
       </View>
@@ -104,65 +121,71 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.xs,
     backgroundColor: 'transparent',
   },
-  composerGlass: {
-    backgroundColor: Colors.glass,
+  composerCard: {
+    backgroundColor: '#191817',
     borderWidth: 1,
-    borderColor: Colors.glassBorder,
-    borderRadius: BorderRadius.md,
+    borderColor: 'rgba(255, 255, 255, 0.09)',
+    borderRadius: BorderRadius.lg,
     paddingHorizontal: Spacing.md,
     paddingTop: 12,
     paddingBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
   },
   textInput: {
-    color: Colors.text,
-    fontSize: Typography.userResponse, // 16px
+    color: '#F5F2EC',
+    fontSize: 15,
     lineHeight: 22,
     minHeight: 36,
-    maxHeight: 100,
+    maxHeight: 110,
     textAlignVertical: 'top',
   },
   bottomControlsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     marginTop: 8,
+  },
+  leftTools: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
   smallIconBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
     paddingVertical: 4,
     paddingHorizontal: 8,
     borderRadius: BorderRadius.xs,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: 'rgba(255, 255, 255, 0.06)',
   },
   smallIconBtnActive: {
-    backgroundColor: 'rgba(90, 44, 42, 0.25)',
-    borderColor: Colors.burgundy,
+    backgroundColor: 'rgba(200, 90, 50, 0.14)',
+    borderColor: 'rgba(200, 90, 50, 0.35)',
   },
   controlGlyph: {
     fontSize: 10,
-    letterSpacing: 1.5,
-    fontWeight: '600',
+    letterSpacing: 1.0,
+    fontWeight: '700',
     color: Colors.textMuted,
   },
   sendAction: {
-    paddingVertical: 5,
-    paddingHorizontal: 14,
-    borderRadius: BorderRadius.xs,
-    borderWidth: 1,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   sendActionActive: {
-    backgroundColor: Colors.forestGreen,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: Colors.terracotta,
   },
   sendActionDisabled: {
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
-    borderColor: 'transparent',
-  },
-  sendActionText: {
-    fontSize: 11,
-    letterSpacing: 1.8,
-    fontWeight: '700',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
   },
 });

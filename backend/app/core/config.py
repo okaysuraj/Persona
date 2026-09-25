@@ -20,8 +20,8 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
 
     # Database
-    # Default to a local SQLite database with async driver for instant local zero-config dev
-    DATABASE_URL: str = "sqlite+aiosqlite:///./persona.db"
+    # Local PostgreSQL via Docker Compose
+    DATABASE_URL: str = "postgresql+asyncpg://persona_user:persona_pass@localhost:5432/persona_db"
 
     # AI Model Providers (fallback to mock persona engine if unconfigured)
     OPENAI_API_KEY: Optional[str] = None

@@ -8,8 +8,9 @@ import {
   TouchableOpacity,
   Dimensions,
 } from 'react-native';
-import { Colors, BorderRadius, Spacing, Typography } from '../../src/constants/theme';
+import { Colors, BorderRadius, Spacing } from '../../src/constants/theme';
 import { useCompanionStore } from '../../src/store/companionStore';
+import { getAvatarSource } from '../../src/utils/avatar';
 
 const { width } = Dimensions.get('window');
 const COLUMN_WIDTH = (width - Spacing.md * 2 - 12) / 2;
@@ -27,17 +28,24 @@ export default function GalleryScreen() {
       date: new Date(m.created_at).toLocaleDateString(),
     }));
 
-  const displayPhotos = photos.length > 0 ? photos : [
-    {
-      id: 'default-1',
-      url: activePersona?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800',
-      caption: 'Initial portrait',
-      date: 'Present',
-    },
-  ];
+  const displayPhotos =
+    photos.length > 0
+      ? photos
+      : [
+          {
+            id: 'default-1',
+            url: activePersona?.avatar_url || '/avatars/maya.jpg',
+            caption: 'Initial portrait at quiet twilight',
+            date: 'Present',
+          },
+        ];
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+    >
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerSuperTitle}>VISUAL ARCHIVE</Text>
@@ -50,9 +58,17 @@ export default function GalleryScreen() {
       {/* Cinematic Photo Grid */}
       <View style={styles.grid}>
         {displayPhotos.map((photo) => (
-          <TouchableOpacity key={photo.id} activeOpacity={0.85} style={styles.cardWrapper}>
+          <TouchableOpacity
+            key={photo.id}
+            activeOpacity={0.85}
+            style={styles.cardWrapper}
+          >
             <View style={styles.photoContainer}>
-              <Image source={{ uri: photo.url }} style={styles.photoImage} resizeMode="cover" />
+              <Image
+                source={getAvatarSource(photo.url)}
+                style={styles.photoImage}
+                resizeMode="cover"
+              />
               <View style={styles.photoMeta}>
                 <Text style={styles.photoCaption} numberOfLines={2}>
                   {photo.caption}
@@ -70,35 +86,34 @@ export default function GalleryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background, // #121211
   },
   scrollContent: {
     paddingHorizontal: Spacing.md,
-    paddingTop: 54,
-    paddingBottom: 60,
+    paddingTop: 52,
+    paddingBottom: 70,
   },
   header: {
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.lg,
   },
   headerSuperTitle: {
-    fontSize: Typography.metadata,
-    letterSpacing: 2.2,
-    color: Colors.textMuted,
-    fontWeight: '600',
+    fontSize: 10,
+    letterSpacing: 2.0,
+    color: Colors.terracotta,
+    fontWeight: '700',
     marginBottom: 6,
   },
   headerTitle: {
-    fontSize: Typography.screenTitle, // 36px
-    lineHeight: Typography.lineHeight.screenTitle,
-    fontWeight: '400',
+    fontSize: 28,
+    fontWeight: '700',
     color: Colors.text,
-    letterSpacing: 0.3,
+    letterSpacing: -0.3,
   },
   headerSubtitle: {
-    fontSize: 15,
+    fontSize: 14,
     color: Colors.textSecondary,
-    marginTop: 8,
-    lineHeight: 22,
+    marginTop: 4,
+    lineHeight: 20,
   },
   grid: {
     flexDirection: 'row',
@@ -109,9 +124,9 @@ const styles = StyleSheet.create({
     width: COLUMN_WIDTH,
   },
   photoContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: '#191817',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     borderRadius: BorderRadius.md,
     overflow: 'hidden',
   },
@@ -123,10 +138,10 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   photoCaption: {
-    fontSize: 14,
+    fontSize: 13,
     color: Colors.text,
     fontWeight: '500',
-    lineHeight: 20,
+    lineHeight: 18,
   },
   photoDate: {
     fontSize: 11,

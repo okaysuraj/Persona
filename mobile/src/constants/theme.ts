@@ -1,60 +1,80 @@
 /**
- * AI COMPANION APP — VISUAL DESIGN SYSTEM
- * Atmospheric, intimate, cinematic, character-driven design tokens.
+ * PERSONA MOBILE — VISUAL DESIGN SYSTEM
+ * Exact match with web app editorial minimalist candlelight design language.
  */
+import { Platform } from 'react-native';
 
 export const Colors = {
-  // Primary Palette
-  background: '#0D100E',        // Deep forest black
-  surface: '#151915',           // Deep slate moss
-  surfaceLight: '#1B201B',      // Soft elevated moss
-  forestGreen: '#294735',       // Deep forest green accent
-  burgundy: '#5A2C2A',          // Deep burgundy accent
-  ochre: '#80652D',             // Dark ochre accent
+  // Canvas & Background
+  background: '#121211', // Evening candlelight canvas
+  backgroundLight: '#FAF8F5', // Warm daylight canvas
+  canvas: '#121211',
+  canvasLight: '#FAF8F5',
+
+  // Cards & Surfaces
+  surface: '#191817', // Elevated card surface
+  surfaceElevated: '#1F1E1C',
+  surfaceLight: '#FFFFFF',
+  surfaceSubtle: 'rgba(255, 255, 255, 0.035)',
+
+  // Borders
+  border: '#2A2826',
+  borderSubtle: 'rgba(255, 255, 255, 0.07)',
+  borderLight: '#E7E3DC',
+  borderHighlight: 'rgba(255, 255, 255, 0.12)',
+
+  // Primary Accent — Terracotta
+  primary: '#C85A32',
+  primaryLight: '#E0754D',
+  primaryHover: '#B34B24',
+  primaryDark: '#943A18',
+  terracotta: '#C85A32',
+  terracottaLight: '#FCF4F0',
+  terracottaBg: 'rgba(200, 90, 50, 0.12)',
+  terracottaBorder: 'rgba(200, 90, 50, 0.28)',
 
   // Typographic Tones
-  text: '#F0EDE4',              // Warm primary text
-  textSecondary: '#A8AAA2',     // Neutral silver sage
-  textMuted: '#70756D',         // Subtle stone gray
-
-  // Restrained Material Glass
-  glass: 'rgba(255, 255, 255, 0.05)',
-  glassBorder: 'rgba(255, 255, 255, 0.10)',
-  glassHover: 'rgba(255, 255, 255, 0.08)',
-  glassElevated: 'rgba(255, 255, 255, 0.07)',
+  text: '#F5F2EC', // Primary warm white
+  textSecondary: '#BDB7AC', // Editorial warm gray
+  textMuted: '#8C877F', // Subdued stone
+  textDark: '#141312', // Light mode primary text
 
   // Semantic & Emotional Aliases
-  primary: '#294735',           // Forest green
-  primaryLight: '#3E664E',
-  romantic: '#5A2C2A',          // Burgundy
-  romanticLight: '#7A3F3D',
-  accentOchre: '#80652D',
+  online: '#10B981', // Present / active badge
+  success: '#10B981',
+  warning: '#E0A34E',
+  danger: '#C85A32',
+  amber: '#E0A34E',
 
-  border: 'rgba(255, 255, 255, 0.08)',
-  borderGlow: 'rgba(41, 71, 53, 0.40)',
-  borderGlowRed: 'rgba(90, 44, 42, 0.40)',
+  // Backwards compatibility aliases
+  forestGreen: '#C85A32', // Mapped to Terracotta for seamless consistency
+  burgundy: '#B34B24', // Mapped to deep Terracotta
+  ochre: '#E0A34E',
+  romantic: '#C85A32',
+  romanticLight: '#E0A34E',
+  glass: 'rgba(255, 255, 255, 0.04)',
+  glassBorder: 'rgba(255, 255, 255, 0.08)',
+  glassHover: 'rgba(255, 255, 255, 0.07)',
+  glassElevated: 'rgba(255, 255, 255, 0.06)',
+  borderGlow: 'rgba(200, 90, 50, 0.35)',
+  borderGlowRed: 'rgba(200, 90, 50, 0.35)',
+  surfaceGlass: 'rgba(255, 255, 255, 0.04)',
+  surfaceGlassRed: 'rgba(200, 90, 50, 0.14)',
 
-  surfaceGlass: 'rgba(255, 255, 255, 0.05)',
-  surfaceGlassRed: 'rgba(90, 44, 42, 0.18)',
-
-  success: '#294735',
-  warning: '#80652D',
-  danger: '#5A2C2A',
-
-  // Subtle Vignettes & Understated Gradients (Extremely low contrast)
-  vignetteBottom: ['transparent', 'rgba(13, 16, 14, 0.85)', '#0D100E'] as const,
-  vignetteTop: ['#0D100E', 'rgba(13, 16, 14, 0.65)', 'transparent'] as const,
-  forestGradient: ['#294735', '#1B2E23'] as const,
-  burgundyGradient: ['#5A2C2A', '#3A1E1D'] as const,
-  ochreGradient: ['#80652D', '#54421E'] as const,
-
-  // Backward compatibility
-  primaryGradient: ['#294735', '#1D3326'] as const,
-  romanticGradient: ['#5A2C2A', '#3A1E1D'] as const,
-  glassGradient: ['rgba(255, 255, 255, 0.06)', 'rgba(255, 255, 255, 0.03)'] as const,
-  glassGradientRed: ['rgba(90, 44, 42, 0.20)', 'rgba(90, 44, 42, 0.08)'] as const,
-  callGradient: ['#0D100E', '#151915', '#0D100E'] as const,
-  duoGradient: ['#294735', '#5A2C2A'] as const,
+  // Gradients
+  vignetteBottom: ['transparent', 'rgba(18, 18, 17, 0.85)', '#121211'] as const,
+  vignetteTop: ['#121211', 'rgba(18, 18, 17, 0.65)', 'transparent'] as const,
+  terracottaGradient: ['#C85A32', '#B34B24'] as const,
+  forestGradient: ['#C85A32', '#943A18'] as const,
+  burgundyGradient: ['#B34B24', '#7D2D10'] as const,
+  ochreGradient: ['#E0A34E', '#B87A28'] as const,
+  cardGradient: ['#1F1E1C', '#191817'] as const,
+  primaryGradient: ['#C85A32', '#B34B24'] as const,
+  romanticGradient: ['#C85A32', '#943A18'] as const,
+  glassGradient: ['rgba(255, 255, 255, 0.06)', 'rgba(255, 255, 255, 0.02)'] as const,
+  glassGradientRed: ['rgba(200, 90, 50, 0.20)', 'rgba(200, 90, 50, 0.06)'] as const,
+  callGradient: ['#121211', '#191817', '#121211'] as const,
+  duoGradient: ['#C85A32', '#E0A34E'] as const,
 };
 
 export const Spacing = {
@@ -66,39 +86,44 @@ export const Spacing = {
   xxl: 52,
 };
 
-// Soft organic shape language (restrained radii, no excessive pills)
 export const BorderRadius = {
-  xs: 4,
-  sm: 8,
-  md: 14,     // Buttons, input containers
-  lg: 20,     // Floating sheets, character frames
-  xl: 26,     // Organic panels
+  xs: 6,
+  sm: 10,
+  md: 16,     // Buttons, input containers
+  lg: 22,     // Floating sheets, character frames
+  xl: 28,     // Organic panels
   round: 9999,
-  full: 14,   // Default to soft corners
+  full: 9999,
 };
 
 // Intimate, editorial typographic scale
 export const Typography = {
-  screenTitle: 36,
-  characterName: 32,
+  screenTitle: 34,
+  characterName: 28,
   hero: 32,
-  title: 24,
-  aiResponse: 18,
-  userResponse: 16,
-  subtitle: 18,
-  body: 16,
-  bodySm: 14,
-  metadata: 12,
+  title: 22,
+  aiResponse: 17,
+  userResponse: 15,
+  subtitle: 16,
+  body: 15,
+  bodySm: 13,
+  metadata: 11,
   caption: 12,
 
+  fontFamily: {
+    serif: Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' }),
+    sans: Platform.select({ ios: 'System', android: 'sans-serif', default: 'sans-serif' }),
+    mono: Platform.select({ ios: 'Courier', android: 'monospace', default: 'monospace' }),
+  },
+
   lineHeight: {
-    screenTitle: 44,
-    characterName: 38,
+    screenTitle: 40,
+    characterName: 34,
     hero: 38,
-    title: 32,
-    aiResponse: 28,
-    userResponse: 24,
-    body: 24,
-    caption: 18,
+    title: 28,
+    aiResponse: 26,
+    userResponse: 22,
+    body: 22,
+    caption: 16,
   },
 };
