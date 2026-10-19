@@ -1,7 +1,7 @@
 # Local PostgreSQL for the apps started manually on the host.
 services:
   postgres:
-    image: pgvector/pgvector:pg16
+    image: postgres:16-alpine
     container_name: persona_postgres
     restart: unless-stopped
     ports:
@@ -11,7 +11,7 @@ services:
       POSTGRES_PASSWORD: persona_pass
       POSTGRES_DB: persona_db
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U persona_user -d persona_db"]
       interval: 5s
@@ -19,4 +19,4 @@ services:
       retries: 5
 
 volumes:
-  pgdata:
+  postgres_data:
