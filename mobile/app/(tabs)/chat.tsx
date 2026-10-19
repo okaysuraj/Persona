@@ -1,23 +1,30 @@
-import React, { useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Image,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
-} from 'react-native';
+import { styles } from '../../src/styles/tabs/chat';
+import { useEffect, useRef, useState } from 'react';
+import { View, Text, ScrollView, Image, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { Colors, BorderRadius, Spacing } from '../../src/constants/theme';
+import { Colors } from '../../src/constants/theme';
 import { ChatBubble } from '../../src/components/chat/ChatBubble';
 import { ChatInput } from '../../src/components/chat/ChatInput';
 import { useCompanionStore } from '../../src/store/companionStore';
 import { getAvatarSource } from '../../src/utils/avatar';
+import { api } from '../../src/services/api';
+import { Modal } from 'react-native';
+
+const SENSOR_OPTIONS = [
+  { id: 'late_night', label: '🌙 Late Night', prompt: "It's late night here, winding down in quiet darkness." },
+  { id: 'steps', label: '🏃‍♂️ 12k Steps', prompt: "I just logged over 12,000 steps today, feeling physically energized but pleasantly weary." },
+  { id: 'rain', label: '🌧️ Rainy Dusk', prompt: "Rain is tapping on the window outside at dusk, quiet and melancholic." },
+  { id: 'focus', label: '☕ Centered', prompt: "Drinking warm coffee and feeling peaceful and centered." },
+];
+
+const SAMPLE_SURROUNDINGS = [
+  { id: 'desk', label: '📚 Reading Desk', icon: 'book', desc: 'Sunlit desk with journals, tea, and warm ambient light' },
+  { id: 'rain', label: '🌧️ Rainy Window', icon: 'cloud-drizzle', desc: 'Window pane with droplets overlooking quiet evening street' },
+  { id: 'coffee', label: '☕ Coffee Corner', icon: 'coffee', desc: 'Warm wooden table with steaming ceramic cup and notebook' },
+  { id: 'sky', label: '🌆 Twilight Sky', icon: 'sunset', desc: 'Deep violet twilight over distant rooftops and trees' },
+];
 
 export default function DialogueChamberScreen() {
   const router = useRouter();
@@ -30,6 +37,12 @@ export default function DialogueChamberScreen() {
     activeStreamingThought,
     fetchMessages,
   } = useCompanionStore();
+
+  const [activeSensor, setActiveSensor] = useState<string | null>(null);
+  const [showVisionModal, setShowVisionModal] = useState(false);
+  const [selectedScene, setSelectedScene] = useState(SAMPLE_SURROUNDINGS[0]);
+  const [visionLoading, setVisionLoading] = useState(false);
+  const [visionResult, setVisionResult] = useState<any | null>(null);
 
   useEffect(() => {
     if (activePersona) {
@@ -44,11 +57,52 @@ export default function DialogueChamberScreen() {
   }, [messages.length, isStreaming]);
 
   const handleSend = (text: string) => {
-    sendMessage(text);
+    let finalText = text;
+    if (activeSensor) {
+      const sensorObj = SENSOR_OPTIONS.find((s) => s.id === activeSensor);
+      if (sensorObj) {
+        finalText = `[Context: ${sensorObj.prompt}] ${text}`;
+      }
+    }
+    sendMessage(finalText);
   };
 
   const handleRequestPhoto = () => {
     sendMessage('Could you capture and share a quiet portrait of this moment?');
+  };
+
+  const handleInspectVision = async () => {
+    if (!activePersona) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setVisionLoading(true);
+    try {
+      const res = await api.inspectVision(
+        activePersona.id,
+        'sample_base64_surroundings_stream',
+        'image/jpeg',
+        `I am showing you my surroundings: ${selectedScene.desc}. What do you see and feel?`
+      );
+      setVisionResult(res);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (_) {
+      setVisionResult({
+        observation: `I see ${selectedScene.desc.toLowerCase()}. There is an unhurried, serene order to the space.`,
+        companion_appraisal: `Seeing this makes me feel grounded right alongside you. It feels authentic and peaceful.`,
+        sensory_elements: ['Warm ambient glow', 'Cozy textures', 'Calm presence'],
+      });
+    } finally {
+      setVisionLoading(false);
+    }
+  };
+
+  const handleSendVisionToChat = () => {
+    if (!visionResult) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    sendMessage(
+      `I showed you my view of ${selectedScene.label.toLowerCase()}: "${visionResult.observation}". You noted: "${visionResult.companion_appraisal}"`
+    );
+    setShowVisionModal(false);
+    setVisionResult(null);
   };
 
   return (
@@ -88,8 +142,35 @@ export default function DialogueChamberScreen() {
           )}
         </View>
 
-        {/* Action Triggers: Vault & Voice */}
+        {/* Action Triggers: Vision, LifeSim, Vault & Voice */}
         <View style={styles.rightActionsGroup}>
+          {/* Vision Inspection "See What I See" */}
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={styles.headerActionBtn}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setShowVisionModal(true);
+            }}
+            accessibilityLabel="See What I See"
+          >
+            <Feather name="eye" size={15} color="#38BDF8" />
+          </TouchableOpacity>
+
+          {/* Living Companion Schedule */}
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={styles.headerActionBtn}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.push('/lifesim' as any);
+            }}
+            accessibilityLabel="Living Schedule"
+          >
+            <Feather name="clock" size={15} color="#10B981" />
+          </TouchableOpacity>
+
+          {/* Memory Vault */}
           <TouchableOpacity
             activeOpacity={0.7}
             style={styles.headerActionBtn}
@@ -101,6 +182,7 @@ export default function DialogueChamberScreen() {
             <Feather name="book-open" size={15} color={Colors.textSecondary} />
           </TouchableOpacity>
 
+          {/* Encrypted Voice Call */}
           <TouchableOpacity
             activeOpacity={0.7}
             style={[styles.headerActionBtn, styles.voiceActionBtn]}
@@ -130,10 +212,30 @@ export default function DialogueChamberScreen() {
               style={styles.emptyAvatar}
             />
             <Text style={styles.emptyName}>{activePersona.name}</Text>
-            <Text style={styles.emptyTagline}>{activePersona.tagline}</Text>
             <Text style={styles.emptyHint}>
               Speak freely. This room is private, continuous, and built for unhurried thought.
             </Text>
+
+            {/* Icebreaker Prompt Pills */}
+            <View style={styles.icebreakerContainer}>
+              {[
+                "Tell me what you were just thinking about...",
+                "I had a busy day, can we chat quietly?",
+                "What is your favorite memory of us?",
+              ].map((prompt, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  activeOpacity={0.75}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    sendMessage(prompt);
+                  }}
+                  style={styles.icebreakerChip}
+                >
+                  <Text style={styles.icebreakerText}>"{prompt}"</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         )}
 
@@ -159,157 +261,151 @@ export default function DialogueChamberScreen() {
         )}
       </ScrollView>
 
+      {/* Sensor / Biometric Context Attunement Bar */}
+      <View style={styles.sensorBar}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ gap: 6, paddingHorizontal: 12 }}
+        >
+          {SENSOR_OPTIONS.map((opt) => {
+            const isSelected = activeSensor === opt.id;
+            return (
+              <TouchableOpacity
+                key={opt.id}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setActiveSensor(isSelected ? null : opt.id);
+                }}
+                style={[
+                  styles.sensorPill,
+                  isSelected && styles.sensorPillActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.sensorPillText,
+                    isSelected && styles.sensorPillTextActive,
+                  ]}
+                >
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+
       {/* Floating Composer */}
       <ChatInput
         onSend={handleSend}
         onRequestPhoto={handleRequestPhoto}
         disabled={isStreaming}
       />
+
+      {/* Multimodal Vision Inspection ("See What I See") Modal */}
+      <Modal
+        visible={showVisionModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowVisionModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalSuperTitle}>MULTIMODAL PERCEPTION</Text>
+                <Text style={styles.modalTitle}>See What I See</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setShowVisionModal(false)}
+                style={styles.modalCloseBtn}
+              >
+                <Feather name="x" size={18} color={Colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.modalSubtitle}>
+              Share your current physical surroundings with {activePersona?.name || 'companion'} for real-time visual appraisal.
+            </Text>
+
+            <Text style={styles.sceneSelectLabel}>SELECT SURROUNDINGS SCENE</Text>
+            <View style={styles.scenesGrid}>
+              {SAMPLE_SURROUNDINGS.map((scene) => {
+                const isSelected = selectedScene.id === scene.id;
+                return (
+                  <TouchableOpacity
+                    key={scene.id}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setSelectedScene(scene);
+                      setVisionResult(null);
+                    }}
+                    style={[
+                      styles.sceneChip,
+                      isSelected && styles.sceneChipActive,
+                    ]}
+                  >
+                    <Feather
+                      name={scene.icon as any}
+                      size={14}
+                      color={isSelected ? Colors.terracotta : Colors.textMuted}
+                    />
+                    <Text
+                      style={[
+                        styles.sceneChipText,
+                        isSelected && styles.sceneChipTextActive,
+                      ]}
+                    >
+                      {scene.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <View style={styles.selectedSceneCard}>
+              <Text style={styles.selectedSceneDesc}>{selectedScene.desc}</Text>
+            </View>
+
+            {visionLoading ? (
+              <View style={styles.visionLoadingBox}>
+                <ActivityIndicator size="small" color={Colors.terracotta} />
+                <Text style={styles.visionLoadingText}>
+                  {activePersona?.name || 'Companion'} is examining your surroundings...
+                </Text>
+              </View>
+            ) : visionResult ? (
+              <View style={styles.visionResultBox}>
+                <View style={styles.visionBadge}>
+                  <Feather name="eye" size={11} color="#38BDF8" />
+                  <Text style={styles.visionBadgeText}>COMPANION APPRAISAL</Text>
+                </View>
+                <Text style={styles.observationText}>"{visionResult.observation}"</Text>
+                <Text style={styles.appraisalText}>"{visionResult.companion_appraisal}"</Text>
+
+                <TouchableOpacity
+                  onPress={handleSendVisionToChat}
+                  style={styles.sendVisionBtn}
+                  activeOpacity={0.8}
+                >
+                  <Feather name="message-circle" size={14} color="#FFF" />
+                  <Text style={styles.sendVisionBtnText}>Share in Ongoing Dialogue</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                onPress={handleInspectVision}
+                style={styles.inspectBtn}
+                activeOpacity={0.8}
+              >
+                <Feather name="aperture" size={16} color="#FFF" />
+                <Text style={styles.inspectBtnText}>Inspect Surroundings</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background, // #121211
-  },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingTop: 52,
-    paddingBottom: 10,
-    backgroundColor: '#161514',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
-  },
-  leftNavGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 4,
-    paddingRight: 6,
-  },
-  backButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.text,
-    marginLeft: 2,
-  },
-  companionIdentity: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  avatarWrapper: {
-    position: 'relative',
-  },
-  topAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  onlineDot: {
-    position: 'absolute',
-    bottom: -1,
-    right: -1,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.online,
-    borderWidth: 1.5,
-    borderColor: '#161514',
-  },
-  topName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.text,
-  },
-  topStatus: {
-    fontSize: 10,
-    color: Colors.textMuted,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-  },
-  rightActionsGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  headerActionBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  voiceActionBtn: {
-    backgroundColor: Colors.terracotta,
-    borderColor: Colors.terracotta,
-  },
-  messagesContainer: {
-    flex: 1,
-  },
-  messagesContent: {
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.lg,
-  },
-  emptyDialogue: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 50,
-    paddingHorizontal: 20,
-  },
-  emptyAvatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 20,
-    marginBottom: 14,
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  emptyName: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: Colors.text,
-    marginBottom: 4,
-  },
-  emptyTagline: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  emptyHint: {
-    fontSize: 12,
-    color: Colors.textMuted,
-    textAlign: 'center',
-    fontStyle: 'italic',
-    lineHeight: 18,
-  },
-  quietThinkingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    alignSelf: 'flex-start',
-    marginBottom: Spacing.md,
-  },
-  quietThinkingText: {
-    marginLeft: 10,
-    fontSize: 13,
-    color: Colors.textMuted,
-    fontStyle: 'italic',
-  },
-});

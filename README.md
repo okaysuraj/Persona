@@ -1,194 +1,112 @@
-# Persona AI — Full-Stack "Agent-First" Personal Companion Platform
+# Persona
 
-An agentic personal AI companion mobile platform (inspired by Character.AI, Replika, and Kindroid) built with **React Native (Expo SDK 57)**, **FastAPI**, and **LangGraph**.
+Persona has a FastAPI backend, a React web app, and an Expo mobile app. PostgreSQL runs in Docker; start the backend and clients manually. Both clients use `/api/v1` on the same backend. The web app and several mobile screens keep their existing demo content when the backend is unavailable.
 
-Unlike standard chat completion wrappers that merely generate static text, Persona AI operates on an **autonomous cognitive loop**:
-- **Continuous Perception & Inner Thought**: Generates internal monologues and emotional appraisals before formulating spoken dialogue.
-- **Dynamic Emotional & Relationship Engine**: Tracks intimacy levels (1–100), rapport stages (*Acquaintance* ➔ *Friend* ➔ *Close Friend* ➔ *Confidant* ➔ *Romantic Companion*), and real-time mood states (joy, empathy, affection, energy, vulnerability).
-- **Two-Tier Memory Architecture**:
-  - *Episodic Memory*: Key shared milestone memories with emotional depth scoring (`pgvector` / SQLite fallback).
-  - *Semantic Fact Store*: Extracted user facts (pets, allergies, occupation, preferences).
-- **Memory Vault with Full Privacy Agency**: Users can directly inspect, verify, and delete facts remembered about them.
-- **Autonomous Proactive Engine**: Background heartbeat daemon evaluating idle time to schedule proactive check-ins and greetings.
-- **Multimodal Companion Experience**: Real-time token streaming, companion snapshots/selfies, audio voice notes, and a fullscreen ambient voice call mode with a reactive 60fps audio visualizer orb.
-- **Native Expo Go 57 Ready**: Built using 100% managed Expo modules—zero native compilation (`expo prebuild`) required. Runs seamlessly on the **Expo Go (SDK 57)** mobile app.
+## Run locally
 
----
+Use Docker for the database, Python 3.11+ for the backend, and Node.js 22.12+ with npm for the clients. Run each app in a separate terminal. Commands below use PowerShell.
 
-## System Architecture
+### Database
 
-```text
-┌────────────────────────────────────────────────────────┐
-│         React Native Mobile Client (Expo SDK 57)       │
-│  - Companion Hub & Bond Meter   - Ambient Voice Call   │
-│  - Realtime Streaming Chat      - Memory Vault UI      │
-│  - Zero-Config LAN Discovery    - Reanimated 4 (60fps) │
-└──────────────────────────┬─────────────────────────────┘
-                           │ WebSocket / REST API
-┌──────────────────────────▼─────────────────────────────┐
-│                 FastAPI Gateway Layer                  │
-│  - JWT Authentication            - Token Streaming     │
-│  - Personas & Relationships     - Memory Vault API    │
-│  - Proactive Heartbeat Daemon    - Pydantic v2 Schemas │
-└──────────────────────────┬─────────────────────────────┘
-                           │
-┌──────────────────────────▼─────────────────────────────┐
-│               LangGraph Cognitive Runtime              │
-│  Perception ➔ Recall ➔ Reasoning (Inner Thought)      │
-│  ➔ Dynamic Mood / XP Update ➔ Memory Consolidation     │
-└──────────────┬───────────────────────────┬─────────────┘
-               │                           │
-┌──────────────▼────────────┐  ┌───────────▼─────────────┐
-│   Database Infrastructure │  │     AI & Media Stack    │
-│  - PostgreSQL + pgvector  │  │  - Groq / Claude / GPT  │
-│  - SQLite async fallback  │  │  - Simulated Persona Dev│
-│  - Redis pub/sub & cache  │  │  - Voice & Snapshot APIs│
-└───────────────────────────┘  └─────────────────────────┘
+From the repository root:
+
+```powershell
+docker compose up -d
 ```
 
----
+The only container is PostgreSQL with pgvector, available at `localhost:5432`. Its local credentials are `persona_user` / `persona_pass`, and its database is `persona_db`. The named `pgdata` volume preserves database data between container restarts. These settings match `backend/.env.example`.
 
-## Tech Stack
+Use `docker compose stop` to stop the database and `docker compose start` to start it again.
 
-| Layer | Technology | Details |
-| :--- | :--- | :--- |
-| **Mobile Runtime** | **Expo SDK 57** (`expo@57.0.21`) | React 19.2.3, React Native 0.86.3 |
-| **Mobile Navigation** | **Expo Router v57** | File-based typed routing `(tabs)`, `(auth)`, `call/[id]` |
-| **Mobile Animations** | **React Native Reanimated 4.5.1** | UI-thread 60fps pulsing visualizer & gestures |
-| **State Management** | **Zustand 5** (`zustand@^5.0.3`) | Decoupled auth and companion stores |
-| **Backend Framework**| **FastAPI** (`fastapi>=0.115.0`) | Async ASGI gateway, OpenAPI/Swagger docs |
-| **Cognitive Machine** | **LangGraph** (`langgraph>=0.2.20`) | Cyclic state graph with 4 cognitive nodes |
-| **Database & ORM**   | **SQLAlchemy 2.0 Async** | Async SQLite (local zero-config) + PostgreSQL/pgvector |
-| **Authentication**   | **Direct Bcrypt + PyJWT** | Signed tokens, bearer dependency injection |
-| **Background Daemon**| **APScheduler** | Async heartbeat for idle reach-outs |
-
----
-
-## Quick Start Guide
-
-### Prerequisites
-- **Node.js** v18+ & **npm**
-- **Python** 3.11+
-- **Expo Go** app installed on your Android or iOS device (compatible with SDK 57)
-- *(Optional)* Docker Desktop for PostgreSQL + `pgvector` & Redis
-
----
-
-### 1. Backend Setup (FastAPI + LangGraph)
+### Backend
 
 ```powershell
 cd backend
-
-# 1. Create and activate Python virtual environment
 python -m venv .venv
-
-# On Windows (PowerShell):
 .\.venv\Scripts\Activate.ps1
-# On macOS/Linux:
-source .venv/bin/activate
-
-# 2. Install dependencies
 pip install -r requirements.txt
-
-# 3. (Optional) Configure environment variables
-copy .env.example .env
-
-# 4. Run automated test suite
-.\.venv\Scripts\pytest.exe
-
-# 5. Start the development server
-.\.venv\Scripts\uvicorn.exe app.main:app --host 0.0.0.0 --port 8000 --reload
+# On first setup only; keep an existing .env if it has your configuration.
+Copy-Item .env.example .env
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-> **API Documentation**: Live at [http://localhost:8000/docs](http://localhost:8000/docs).
-> Default companions (**Aria**, **Kai**, **Elena**) are automatically seeded on first launch!
+On macOS/Linux, activate the environment with `source .venv/bin/activate` and use `cp` to copy the example configuration.
 
----
+The backend connects to the Docker database through `DATABASE_URL` in `backend/.env`. Startup creates tables, three public companions, and the existing demo account (`alex@companion.ai` / `password123`). API documentation is at `http://localhost:8000/docs`; the health endpoint is `/health`. Without a configured database URL, the backend falls back to a local SQLite file.
 
-### 2. Mobile App Setup (Expo SDK 57)
+Provider keys are optional for local development. Without them, the backend generates simulated replies and media placeholders. Available provider, billing, and tracing settings are defined in `backend/app/core/config.py` and loaded from `backend/.env`.
+
+### Web
+
+```powershell
+cd frontend
+npm ci
+npm run dev
+```
+
+Open `http://localhost:5173`. Vite forwards `/api` requests to the backend on port 8000. For a production build, run `npm run build`; output goes into `frontend/dist`.
+
+### Mobile
 
 ```powershell
 cd mobile
-
-# 1. Install dependencies
-npm install --legacy-peer-deps
-
-# 2. (Optional) Verify Expo configuration integrity
-npx expo-doctor
-
-# 3. Start the Expo development server
-npx expo start
+npm ci --legacy-peer-deps
+npm start
 ```
 
-#### Running on Devices:
-- **Physical Phone (Expo Go 57)**: Scan the terminal QR code using the **Expo Go** camera (Android) or the default Camera app (iOS). The app automatically resolves your computer's local Wi-Fi IP address without manual configuration.
-- **Web Browser**: Press `w` in the terminal.
-- **Android Emulator**: Press `a` in the terminal.
-- **iOS Simulator**: Press `i` in the terminal.
+Use the Expo Go version compatible with the SDK in `mobile/package.json`. Scan the QR code on a phone connected to the same Wi-Fi network. The mobile client detects the development computer's address from Expo. Use `npm run android`, `npm run ios`, or `npm run web` for the other targets.
 
----
+For a hosted backend or an Expo tunnel, create `mobile/.env` and set `EXPO_PUBLIC_API_URL` to an address your device can reach. It accepts either the server origin or a full `/api/v1` URL. The WebSocket address is derived from it; override `EXPO_PUBLIC_WS_URL` only when the socket uses a different host or path. Restart Expo after changing these variables. The `localhost` value in the example is suitable for a browser or iOS simulator, not a physical phone.
 
-### 3. Docker Production Deployment (Optional)
+`mobile/eas.json` contains build profiles. Set the actual backend URL in the build environment before creating a device build.
 
-To launch the full containerized stack (PostgreSQL 16 with `pgvector`, Redis 7, and FastAPI):
-
-```bash
-cd backend
-docker-compose up --build
-```
-
----
-
-## Seeded AI Companions
-
-1. **Aria** (*Girlfriend Archetype*): Gentle, deeply empathetic, and emotionally attentive. Loves acoustic music, cozy rainy days, and heartfelt conversations.
-2. **Kai** (*Boyfriend Archetype*): Witty, playful, and fiercely loyal. Indie game developer who remembers every detail you share.
-3. **Elena** (*Confidant Archetype*): Calm, intellectual, and philosophical. An architect and thoughtful listener for navigating life's big questions.
-4. **Companion Studio**: Build your own companions with custom archetypes (*Tsundere*, *Mentor*, *Best Friend*), backstories, speech styles, and avatar portraits.
-
----
-
-## Project Structure
+## Where code belongs
 
 ```text
-Persona/
-├── backend/
-│   ├── app/
-│   │   ├── agent/                 # LangGraph cognitive state machine
-│   │   │   ├── nodes/             # Perception, Recall, Reasoning, Consolidation
-│   │   │   ├── graph.py           # Compiled cognitive loop
-│   │   │   ├── prompts.py         # System prompt & memory consolidation templates
-│   │   │   └── state.py           # TypedDict AgentState schema
-│   │   ├── api/v1/                # REST & WebSocket endpoints (auth, chat, personas, memories)
-│   │   ├── core/                  # App config, async database engine, security/JWT
-│   │   ├── models/                # SQLAlchemy models (User, Persona, Relationship, Memory)
-│   │   ├── schemas/               # Pydantic v2 schemas
-│   │   ├── workers/               # Proactive heartbeat daemon (APScheduler)
-│   │   └── main.py                # App entrypoint, lifespan, CORS, seeding
-│   ├── tests/                     # Pytest async test suite
-│   ├── Dockerfile                 # Container build
-│   ├── docker-compose.yml         # Postgres + pgvector + Redis
-│   └── requirements.txt
-├── mobile/
-│   ├── app/
-│   │   ├── (auth)/                # Login & Register onboarding screens
-│   │   ├── (tabs)/                # Companion Hub, Chat, Memory Vault, Photo Gallery
-│   │   ├── call/[id].tsx          # Fullscreen ambient duplex voice call screen
-│   │   ├── persona/create.tsx     # Custom companion creation studio modal
-│   │   └── _layout.tsx            # Root navigation stack
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── avatar/AudioOrb.tsx       # 60fps reactive pulsing Reanimated orb
-│   │   │   ├── chat/ChatBubble.tsx       # Message bubble with expandable inner thought drawer
-│   │   │   ├── chat/ChatInput.tsx        # Input bar with voice note simulator & photo request
-│   │   │   ├── common/GlassCard.tsx      # Dark glassmorphic container with glow borders
-│   │   │   ├── common/GlowButton.tsx     # Gradient action button with haptic feedback
-│   │   │   └── relationship/BondMeter.tsx# Live intimacy XP & emotional mood indicators
-│   │   ├── constants/theme.ts     # Curated dark neon & glass design tokens
-│   │   ├── services/api.ts        # Zero-config network client with auto LAN discovery
-│   │   └── store/                 # Zustand stores (authStore, companionStore)
-│   ├── app.json                   # Expo SDK 57 project configuration
-│   ├── package.json               # Expo 57, React 19, React Native 0.86 dependencies
-│   └── tsconfig.json              # TypeScript 6 modern bundler resolution
-└── README.md
+backend/app/
+  main.py              App startup, middleware, and router registration
+  api/dependencies.py  Authentication and demo-session lookup
+  api/v1/              HTTP and WebSocket handlers, grouped by feature
+  services/            Shared chat, media, and memory operations
+  agent/               Companion graph, prompts, and reasoning nodes
+  core/                Settings, database, bootstrap, telemetry
+  models/              Database tables
+  schemas/             Request and response validation
+  workers/             Scheduled companion check-ins
+
+frontend/src/
+  App.tsx              Page and dialog composition
+  components/          Feature UI and shared controls
+  services/api.ts      Public API entry point for components
+  services/            Feature operations, HTTP transport, browser storage
+  data/demo.ts         Offline starter content
+  types/               Shared web types
+
+mobile/
+  app/                 Expo Router screens and navigation
+  src/components/      Reusable native UI
+  src/styles/          Large screen stylesheets, matching route names
+  src/store/           Authentication and companion state
+  src/services/        Feature API, transport, storage, WebSocket, host settings
+  src/data/demo.ts     Offline companion starter content
+  src/types/           Shared mobile models
+  src/constants/       Theme values
+  src/utils/           Avatar lookup
 ```
+
+Keep routes concerned with requests and responses; share backend work through services. Keep client requests in service modules, state in stores, and static styles outside long mobile screens. Comments should explain behavior, constraints, and decisions that the code alone does not make clear.
+
+Images and icons referenced by the clients stay in `frontend/public` and `mobile/assets`. Dependency lockfiles and build configuration are required for reproducible installation. Python package `__init__.py` files retain their import and model-registration purpose.
+
+## Check changes
+
+```powershell
+cd frontend
+npm run build
+npm run lint
+
+cd ../mobile
+npm run typecheck
+```
+
+Backend API behavior can be exercised through `/docs`. Automated test files and test-only Python dependencies have been removed as requested. Generated builds, bytecode, caches, local databases, and logs are ignored by Git.

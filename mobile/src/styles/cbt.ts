@@ -1,0 +1,231 @@
+// Static presentation values for the matching route.
+import { StyleSheet } from 'react-native';
+import { Colors, Spacing } from '../constants/theme';
+
+export const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md,
+    paddingTop: 52,
+    paddingBottom: 12,
+    backgroundColor: '#161514',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  backBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  backBtnText: {
+    fontSize: 13,
+    color: Colors.text,
+    fontWeight: '600',
+  },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 9999,
+    backgroundColor: 'rgba(56, 189, 248, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.3)',
+  },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#38BDF8',
+    letterSpacing: 1.0,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.md,
+    paddingBottom: 60,
+  },
+  heroSection: {
+    marginBottom: Spacing.lg,
+  },
+  heroTitle: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: Colors.text,
+    letterSpacing: -0.3,
+  },
+  heroSubtitle: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    marginTop: 4,
+    lineHeight: 18,
+  },
+  wizardCard: {
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: '#181716',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  stepProgressRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: 16,
+  },
+  stepBar: {
+    flex: 1,
+    height: 3,
+    borderRadius: 2,
+  },
+  stepBarActive: {
+    backgroundColor: Colors.terracotta,
+  },
+  stepBarInactive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  stepContent: {
+    gap: 10,
+  },
+  stepBadge: {
+    alignSelf: 'flex-start',
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    borderRadius: 4,
+    backgroundColor: 'rgba(200, 90, 50, 0.15)',
+  },
+  stepBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: Colors.terracotta,
+    letterSpacing: 0.8,
+  },
+  stepTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.text,
+    lineHeight: 22,
+  },
+  stepHint: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    lineHeight: 16,
+    marginBottom: 4,
+  },
+  textArea: {
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 10,
+    padding: 12,
+    color: Colors.text,
+    fontSize: 13,
+    textAlignVertical: 'top',
+    height: 100,
+  },
+  nextBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: Colors.terracotta,
+    marginTop: 8,
+  },
+  nextBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#FFF',
+  },
+  backStepBtn: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  backStepBtnText: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    fontWeight: '500',
+  },
+  distortionsGrid: {
+    gap: 8,
+    marginTop: 6,
+  },
+  distortionChip: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+  },
+  distortionChipActive: {
+    backgroundColor: 'rgba(200, 90, 50, 0.15)',
+    borderColor: Colors.terracotta,
+  },
+  distortionText: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    fontWeight: '500',
+  },
+  distortionTextActive: {
+    color: Colors.text,
+    fontWeight: '700',
+  },
+  resultsContainer: {
+    gap: 12,
+  },
+  resultCardOuter: {
+    width: '100%',
+  },
+  resultCardInner: {
+    padding: 16,
+    gap: 6,
+  },
+  resultBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  resultBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: Colors.terracotta,
+    letterSpacing: 1.0,
+  },
+  resultMainText: {
+    fontSize: 13,
+    color: Colors.text,
+    lineHeight: 20,
+  },
+  doneBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: Colors.terracotta,
+    marginTop: 8,
+  },
+  doneBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFF',
+  },
+});

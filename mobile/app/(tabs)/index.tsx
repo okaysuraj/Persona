@@ -1,27 +1,18 @@
-import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Image,
-  ScrollView,
-  TouchableOpacity,
-  RefreshControl,
-  Modal,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
+import { styles } from '../../src/styles/tabs/index';
+import { useEffect, useState } from 'react';
+import { View, Text, Image, ScrollView, TouchableOpacity, RefreshControl, Modal, TextInput, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { Colors, BorderRadius, Spacing, Typography } from '../../src/constants/theme';
+import { Colors, Spacing, Typography } from '../../src/constants/theme';
 import { GlowButton } from '../../src/components/common/GlowButton';
 import { DoubleBezelCard } from '../../src/components/common/DoubleBezelCard';
 import { BrandHeader } from '../../src/components/common/BrandHeader';
 import { IntimacyGauge } from '../../src/components/common/IntimacyGauge';
-import { useCompanionStore, Persona } from '../../src/store/companionStore';
+import { useCompanionStore } from '../../src/store/companionStore';
+import type { Persona } from '../../src/types';
 import { getAvatarSource } from '../../src/utils/avatar';
+import { api } from '../../src/services/api';
 
 const ARCHETYPE_OPTIONS = [
   'confidant',
@@ -37,11 +28,14 @@ export default function MobileLandingScreen() {
   const router = useRouter();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importJsonText, setImportJsonText] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
 
   // Form state for Craft Persona
   const [name, setName] = useState('');
   const [archetype, setArchetype] = useState('confidant');
-  const [gender, setGender] = useState('female');
+  const [gender] = useState('female');
   const [tagline, setTagline] = useState('');
   const [backstory, setBackstory] = useState('');
   const [accentQuote, setAccentQuote] = useState('');
@@ -111,6 +105,38 @@ export default function MobileLandingScreen() {
     setShowCreateModal(false);
   };
 
+  const handleImportCard = async () => {
+    if (!importJsonText.trim()) return;
+    setIsImporting(true);
+    try {
+      const parsed = JSON.parse(importJsonText.trim());
+      const created = await api.importCharacterCard(parsed);
+      await fetchPersonas();
+      await setActivePersona(created);
+      setShowImportModal(false);
+      setImportJsonText('');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Success', `Companion ${created.name} imported from Character Card V2!`);
+    } catch (err: any) {
+      Alert.alert('Import Error', err.message || 'Invalid Character Card JSON format');
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const handleExportCard = async (p: Persona) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      const card = await api.exportCharacterCard(p.id);
+      Alert.alert(
+        'Character Card V2 Spec',
+        `Successfully generated Character Card V2 for ${p.name} (${card.spec}). Ready to export to Tavern or Character.ai.`
+      );
+    } catch (err: any) {
+      Alert.alert('Export Error', err.message || 'Failed to export character card');
+    }
+  };
+
   const currentHeroPersona = activePersona || personas[0];
 
   return (
@@ -131,14 +157,104 @@ export default function MobileLandingScreen() {
         <BrandHeader
           showSubtitle={false}
           rightAction={
-            <TouchableOpacity
-              activeOpacity={0.75}
-              onPress={() => setShowCreateModal(true)}
-              style={styles.headerNewBtn}
-            >
-              <Feather name="plus" size={13} color={Colors.text} />
-              <Text style={styles.headerNewBtnText}>Craft</Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <TouchableOpacity
+                activeOpacity={0.75}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  router.push('/paywall' as any);
+                }}
+                style={[
+                  styles.headerNewBtn,
+                  {
+                    backgroundColor: 'rgba(200, 90, 50, 0.12)',
+                    borderColor: 'rgba(200, 90, 50, 0.35)',
+                  },
+                ]}
+              >
+                <Feather name="award" size={12} color={Colors.terracotta} />
+                <Text
+                  style={[
+                    styles.headerNewBtnText,
+                    { color: Colors.terracotta, fontWeight: '700' },
+                  ]}
+                >
+                  Plus
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                activeOpacity={0.75}
+                onPress={() => router.push('/stories' as any)}
+                style={styles.headerNewBtn}
+              >
+                <Feather name="book-open" size={12} color="#FBBF24" />
+                <Text style={styles.headerNewBtnText}>Stories</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                activeOpacity={0.75}
+                onPress={() => router.push('/lounge' as any)}
+                style={styles.headerNewBtn}
+              >
+                <Feather name="coffee" size={12} color="#F59E0B" />
+                <Text style={styles.headerNewBtnText}>Lounge</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                activeOpacity={0.75}
+                onPress={() => router.push('/cbt' as any)}
+                style={styles.headerNewBtn}
+              >
+                <Feather name="shield" size={12} color="#38BDF8" />
+                <Text style={styles.headerNewBtnText}>Reflect</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                activeOpacity={0.75}
+                onPress={() => router.push('/lifesim' as any)}
+                style={styles.headerNewBtn}
+              >
+                <Feather name="clock" size={12} color="#10B981" />
+                <Text style={styles.headerNewBtnText}>Life</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                activeOpacity={0.75}
+                onPress={() => router.push('/together' as any)}
+                style={styles.headerNewBtn}
+              >
+                <Feather name="moon" size={12} color="#818CF8" />
+                <Text style={styles.headerNewBtnText}>Together</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                activeOpacity={0.75}
+                onPress={() => router.push('/letters' as any)}
+                style={styles.headerNewBtn}
+              >
+                <Feather name="mail" size={12} color="#F59E0B" />
+                <Text style={styles.headerNewBtnText}>Letters</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                activeOpacity={0.75}
+                onPress={() => router.push('/telemetry' as any)}
+                style={styles.headerNewBtn}
+              >
+                <Feather name="activity" size={12} color="#34D399" />
+                <Text style={styles.headerNewBtnText}>Ops</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                activeOpacity={0.75}
+                onPress={() => setShowCreateModal(true)}
+                style={styles.headerNewBtn}
+              >
+                <Feather name="plus" size={13} color={Colors.text} />
+                <Text style={styles.headerNewBtnText}>Craft</Text>
+              </TouchableOpacity>
+            </View>
           }
         />
 
@@ -179,7 +295,57 @@ export default function MobileLandingScreen() {
               icon={<Feather name="plus" size={14} color={Colors.text} />}
               style={styles.heroSecondaryBtn}
             />
+
+            <GlowButton
+              title="Import V2"
+              onPress={() => setShowImportModal(true)}
+              variant="secondary"
+              icon={<Feather name="download-cloud" size={14} color={Colors.text} />}
+              style={styles.heroSecondaryBtn}
+            />
           </View>
+        </View>
+
+        {/* Living Stories & Status Bar */}
+        <View style={styles.storiesBarSection}>
+          <View style={styles.storiesBarHeader}>
+            <View style={styles.storiesBarHeaderLeft}>
+              <Feather name="book-open" size={12} color={Colors.terracotta} />
+              <Text style={styles.storiesBarSuper}>COMPANION STORIES & STATUS</Text>
+            </View>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => router.push('/stories' as any)}
+            >
+              <Text style={styles.storiesBarViewAll}>View Stories →</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.storiesAvatarRow}
+          >
+            {personas.map((p) => (
+              <TouchableOpacity
+                key={p.id}
+                activeOpacity={0.8}
+                onPress={() => router.push('/stories' as any)}
+                style={styles.storyAvatarItem}
+              >
+                <View style={styles.storyAvatarRing}>
+                  <Image
+                    source={getAvatarSource(p.avatar_url)}
+                    style={styles.storyAvatarImg}
+                  />
+                  <View style={styles.storyActiveDot} />
+                </View>
+                <Text style={styles.storyAvatarName} numberOfLines={1}>
+                  {p.name.split(' ')[0]}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
 
         {/* Curated Companion Dossier Section */}
@@ -259,25 +425,34 @@ export default function MobileLandingScreen() {
                     moodState={rel.mood_state}
                   />
 
-                  {/* Bottom Card Actions */}
-                  <View style={styles.cardActionRow}>
-                    <TouchableOpacity
-                      activeOpacity={0.8}
-                      onPress={() => handleSelectAndChat(persona)}
-                      style={styles.beginSessionBtn}
-                    >
-                      <Text style={styles.beginSessionText}>Begin Session</Text>
-                      <Feather name="arrow-right" size={13} color={Colors.terracotta} />
-                    </TouchableOpacity>
+                    {/* Bottom Card Actions */}
+                    <View style={styles.cardActionRow}>
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        onPress={() => handleSelectAndChat(persona)}
+                        style={styles.beginSessionBtn}
+                      >
+                        <Text style={styles.beginSessionText}>Begin Session</Text>
+                        <Feather name="arrow-right" size={13} color={Colors.terracotta} />
+                      </TouchableOpacity>
 
-                    <TouchableOpacity
-                      activeOpacity={0.7}
-                      onPress={() => handleStartCall(persona)}
-                      style={styles.voiceIconBtn}
-                    >
-                      <Feather name="phone-call" size={14} color={Colors.textSecondary} />
-                    </TouchableOpacity>
-                  </View>
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        onPress={() => handleExportCard(persona)}
+                        style={styles.voiceIconBtn}
+                        accessibilityLabel="Export Character Card V2"
+                      >
+                        <Feather name="share-2" size={14} color={Colors.textSecondary} />
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        onPress={() => handleStartCall(persona)}
+                        style={styles.voiceIconBtn}
+                      >
+                        <Feather name="phone-call" size={14} color={Colors.textSecondary} />
+                      </TouchableOpacity>
+                    </View>
                 </DoubleBezelCard>
               );
             })}
@@ -400,332 +575,71 @@ export default function MobileLandingScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* Import Character Card V2 Modal */}
+      <Modal
+        visible={showImportModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowImportModal(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.modalOverlay}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalSuperTitle}>UNIVERSAL CHARACTER SPEC</Text>
+                <Text style={styles.modalTitle}>Import Card (V2)</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setShowImportModal(false)}
+                style={styles.modalCloseBtn}
+              >
+                <Feather name="x" size={18} color={Colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: Spacing.xl }}
+            >
+              <Text style={{ color: Colors.textSecondary, fontSize: 12, marginBottom: 12, lineHeight: 18 }}>
+                Paste Tavern, Character.ai, or Pygmalion Character Card V2 JSON specification below:
+              </Text>
+
+              <TextInput
+                placeholder={`{\n  "spec": "chara_card_v2",\n  "spec_version": "2.0",\n  "data": {\n    "name": "Companion",\n    "description": "..."\n  }\n}`}
+                placeholderTextColor={Colors.textMuted}
+                value={importJsonText}
+                onChangeText={setImportJsonText}
+                multiline
+                numberOfLines={8}
+                style={[
+                  styles.inputField,
+                  {
+                    height: 160,
+                    textAlignVertical: 'top',
+                    fontFamily: Typography.fontFamily.mono,
+                    fontSize: 11,
+                  },
+                ]}
+              />
+
+              <View style={styles.modalSubmitWrapper}>
+                <GlowButton
+                  title={isImporting ? 'Importing Card...' : 'Import Companion'}
+                  onPress={handleImportCard}
+                  loading={isImporting}
+                  variant="terracotta"
+                  style={styles.modalSubmitBtn}
+                />
+              </View>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background, // #121211
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: Spacing.md,
-    paddingTop: 50,
-    paddingBottom: 70,
-  },
-  headerNewBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: BorderRadius.xs,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.09)',
-  },
-  headerNewBtnText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.text,
-  },
-
-  // Hero Section
-  heroSection: {
-    marginTop: Spacing.lg,
-    marginBottom: Spacing.xl,
-  },
-  heroBadge: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 9999,
-    backgroundColor: Colors.terracottaBg,
-    borderWidth: 1,
-    borderColor: Colors.terracottaBorder,
-    marginBottom: 14,
-  },
-  heroBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: Colors.terracotta,
-    letterSpacing: 1.4,
-  },
-  heroTitle: {
-    fontSize: 28,
-    lineHeight: 34,
-    fontWeight: '700',
-    color: Colors.text,
-    letterSpacing: -0.4,
-    fontFamily: Typography.fontFamily.serif,
-    marginBottom: 10,
-  },
-  heroSubtitle: {
-    fontSize: 15,
-    lineHeight: 22,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.lg,
-  },
-  heroActionRow: {
-    flexDirection: 'column',
-    gap: 10,
-  },
-  heroPrimaryBtn: {
-    width: '100%',
-  },
-  heroSecondaryBtn: {
-    width: '100%',
-  },
-
-  // Dossier Section
-  dossierSection: {
-    marginTop: Spacing.sm,
-  },
-  dossierHeader: {
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
-    marginBottom: Spacing.md,
-  },
-  dossierTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: Colors.text,
-    letterSpacing: -0.2,
-  },
-  dossierSubtitle: {
-    fontSize: 12,
-    color: Colors.textMuted,
-    marginTop: 2,
-    letterSpacing: 0.5,
-  },
-
-  // Companion Cards List
-  cardsList: {
-    gap: 16,
-  },
-  cardWrapper: {
-    width: '100%',
-  },
-  cardInner: {
-    padding: 18,
-    gap: 14,
-  },
-  cardTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  avatarWrapper: {
-    position: 'relative',
-  },
-  avatarImage: {
-    width: 64,
-    height: 64,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  avatarOnlineDot: {
-    position: 'absolute',
-    bottom: -2,
-    right: -2,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: Colors.online,
-    borderWidth: 2,
-    borderColor: '#191817',
-  },
-  archetypeBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 9999,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-  },
-  archetypeText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#D5CEC4',
-    letterSpacing: 1.2,
-  },
-  cardBody: {
-    gap: 4,
-  },
-  personaName: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: Colors.text,
-    letterSpacing: -0.2,
-  },
-  personaTagline: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    lineHeight: 20,
-  },
-  quoteBlock: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: 'rgba(255, 255, 255, 0.025)',
-    borderLeftWidth: 2,
-    borderLeftColor: Colors.terracotta,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 4,
-  },
-  quoteMark: {
-    fontSize: 16,
-    color: Colors.terracotta,
-    marginRight: 4,
-    lineHeight: 18,
-    fontWeight: '700',
-  },
-  quoteText: {
-    flex: 1,
-    fontSize: 13,
-    fontStyle: 'italic',
-    color: '#D5CEC4',
-    lineHeight: 18,
-  },
-  cardActionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.05)',
-  },
-  beginSessionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: 'rgba(200, 90, 50, 0.08)',
-  },
-  beginSessionText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.terracotta,
-  },
-  voiceIconBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  // Modal Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
-    justifyContent: 'flex-end',
-  },
-  modalContainer: {
-    backgroundColor: '#191817',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    borderTopWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.md,
-    paddingBottom: 40,
-    maxHeight: '90%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
-  },
-  modalSuperTitle: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: Colors.terracotta,
-    letterSpacing: 1.8,
-  },
-  modalTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: Colors.text,
-  },
-  modalCloseBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalScroll: {
-    maxHeight: 480,
-  },
-  inputLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: Colors.textMuted,
-    letterSpacing: 1.4,
-    marginTop: 14,
-    marginBottom: 6,
-  },
-  inputField: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: BorderRadius.sm,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    color: Colors.text,
-    fontSize: 14,
-  },
-  archetypeChipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  archetypeChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-  },
-  archetypeChipActive: {
-    backgroundColor: Colors.terracotta,
-    borderColor: Colors.terracotta,
-  },
-  archetypeChipText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-    letterSpacing: 0.8,
-  },
-  archetypeChipTextActive: {
-    color: '#FFF',
-  },
-  modalSubmitWrapper: {
-    marginTop: 22,
-    marginBottom: 16,
-  },
-  modalSubmitBtn: {
-    width: '100%',
-  },
-});

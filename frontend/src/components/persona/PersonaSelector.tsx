@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import type { Persona, Relationship, Archetype, PersonaCreateInput } from '../../types';
+import { api } from '../../services/api';
 import { DoubleBezelCard } from '../ui/DoubleBezelCard';
 import { Button } from '../ui/Button';
 import { IntimacyGauge } from '../ui/IntimacyGauge';
@@ -9,6 +10,8 @@ import {
   Heart,
   ChatTeardropText,
   X,
+  UploadSimple,
+  DownloadSimple,
 } from '@phosphor-icons/react';
 
 interface PersonaSelectorProps {
@@ -16,6 +19,7 @@ interface PersonaSelectorProps {
   relationships: Record<string, Relationship>;
   onSelectPersona: (persona: Persona) => void;
   onCreatePersona: (input: PersonaCreateInput) => Promise<void>;
+  onImportCard?: (cardData: any) => Promise<void>;
 }
 
 export const PersonaSelector: React.FC<PersonaSelectorProps> = ({
@@ -23,8 +27,15 @@ export const PersonaSelector: React.FC<PersonaSelectorProps> = ({
   relationships,
   onSelectPersona,
   onCreatePersona,
+  onImportCard,
 }) => {
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importJsonText, setImportJsonText] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
+  const [importError, setImportError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [name, setName] = useState('');
   const [archetype, setArchetype] = useState<Archetype>('confidant');
   const [gender, setGender] = useState('female');
@@ -56,6 +67,56 @@ export const PersonaSelector: React.FC<PersonaSelectorProps> = ({
     setAccentQuote('');
     setIsSubmitting(false);
     setShowCreateModal(false);
+  };
+
+  const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      setImportJsonText(content);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleImportSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!importJsonText.trim()) return;
+    setIsImporting(true);
+    setImportError('');
+    try {
+      const parsed = JSON.parse(importJsonText.trim());
+      if (onImportCard) {
+        await onImportCard(parsed);
+      } else {
+        await api.importCharacterCard(parsed);
+      }
+      setShowImportModal(false);
+      setImportJsonText('');
+    } catch (err: any) {
+      setImportError(err.message || 'Invalid Character Card V2 JSON format');
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const handleExportCard = async (e: React.MouseEvent, persona: Persona) => {
+    e.stopPropagation();
+    try {
+      const card = await api.exportCharacterCard(persona.id);
+      const blob = new Blob([JSON.stringify(card, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${persona.name.toLowerCase().replace(/\s+/g, '_')}_card_v2.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Export failed', err);
+    }
   };
 
   return (
@@ -97,6 +158,16 @@ export const PersonaSelector: React.FC<PersonaSelectorProps> = ({
             className="w-full sm:w-auto justify-center"
           >
             Craft Persona
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="md"
+            onClick={() => setShowImportModal(true)}
+            leadingIcon={<UploadSimple size={14} weight="bold" />}
+            className="w-full sm:w-auto justify-center border border-[#141312]/[0.1] dark:border-white/[0.1]"
+          >
+            Import Card (V2)
           </Button>
         </div>
       </div>
@@ -187,13 +258,25 @@ export const PersonaSelector: React.FC<PersonaSelectorProps> = ({
                         Ready to speak
                       </span>
 
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        trailingIcon={<ArrowRight size={13} weight="bold" />}
-                      >
-                        Open Room
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={(e) => handleExportCard(e, persona)}
+                          className="px-2 py-1 rounded-lg border border-[#141312]/[0.1] dark:border-white/[0.1] hover:bg-[#141312]/[0.05] dark:hover:bg-white/[0.05] text-[#78746E] dark:text-[#A39E96] text-xs font-mono flex items-center gap-1 transition-colors"
+                          title="Export Character Card V2 JSON"
+                        >
+                          <DownloadSimple size={13} weight="bold" />
+                          <span>V2</span>
+                        </button>
+
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          trailingIcon={<ArrowRight size={13} weight="bold" />}
+                        >
+                          Open Room
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </DoubleBezelCard>
@@ -331,6 +414,103 @@ export const PersonaSelector: React.FC<PersonaSelectorProps> = ({
                   className="w-full sm:w-auto justify-center"
                 >
                   {isSubmitting ? 'Breathing life...' : 'Bring to Life'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Import Character Card V2 Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-md">
+          <div className="relative w-full max-w-xl p-5 sm:p-8 rounded-2xl sm:rounded-3xl bg-[#FAF8F5] dark:bg-[#171615] border border-[#141312]/[0.1] dark:border-white/[0.1] shadow-2xl max-h-[92dvh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-[#141312]/[0.08] dark:border-white/[0.08] mb-5 sm:mb-6">
+              <div>
+                <h3 className="text-lg sm:text-xl font-bold tracking-tight text-[#141312] dark:text-[#F5F2EC] flex items-center gap-2">
+                  <UploadSimple size={20} className="text-[#C85A32]" />
+                  Import Character Card (V2)
+                </h3>
+                <p className="text-xs text-[#78746E] dark:text-[#A39E96]">
+                  Supports Tavern, Pygmalion, and Character.ai V2 JSON specifications.
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowImportModal(false);
+                  setImportError('');
+                  setImportJsonText('');
+                }}
+                className="p-1 rounded-full text-[#78746E] dark:text-[#A39E96] hover:bg-[#141312]/[0.05] dark:hover:bg-white/[0.05]"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleImportSubmit} className="space-y-4">
+              {importError && (
+                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs">
+                  {importError}
+                </div>
+              )}
+
+              {/* File upload prompt */}
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="cursor-pointer p-6 rounded-2xl border-2 border-dashed border-[#141312]/[0.12] dark:border-white/[0.12] hover:border-[#C85A32] dark:hover:border-[#C85A32] flex flex-col items-center justify-center text-center transition-colors bg-white/40 dark:bg-white/[0.02]"
+              >
+                <UploadSimple size={32} className="text-[#C85A32] mb-2" />
+                <span className="text-sm font-semibold text-[#141312] dark:text-[#F5F2EC]">
+                  Click to select Character Card JSON file
+                </span>
+                <span className="text-xs text-[#78746E] dark:text-[#A39E96] mt-1">
+                  Or paste JSON content into the editor below
+                </span>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".json,application/json"
+                  className="hidden"
+                  onChange={handleFileSelected}
+                />
+              </div>
+
+              {/* JSON Paste Textarea */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-mono uppercase tracking-wider text-[#78746E] dark:text-[#A39E96]">
+                  Card Specification JSON
+                </label>
+                <textarea
+                  rows={8}
+                  placeholder={`{\n  "spec": "chara_card_v2",\n  "spec_version": "2.0",\n  "data": {\n    "name": "Companion Name",\n    "description": "...",\n    "personality": "...",\n    "system_prompt": "..."\n  }\n}`}
+                  value={importJsonText}
+                  onChange={(e) => setImportJsonText(e.target.value)}
+                  className="w-full text-xs font-mono rounded-xl p-3 bg-white dark:bg-[#1F1D1B] border border-[#141312]/[0.08] dark:border-white/[0.08] text-[#141312] dark:text-[#F5F2EC] focus:outline-none focus:border-[#C85A32] resize-none"
+                />
+              </div>
+
+              <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 sm:gap-3 pt-4 border-t border-[#141312]/[0.08] dark:border-white/[0.08]">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="md"
+                  onClick={() => {
+                    setShowImportModal(false);
+                    setImportError('');
+                    setImportJsonText('');
+                  }}
+                  className="w-full sm:w-auto justify-center"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="terracotta"
+                  size="md"
+                  disabled={isImporting || !importJsonText.trim()}
+                  className="w-full sm:w-auto justify-center"
+                >
+                  {isImporting ? 'Ingesting Card...' : 'Import Companion'}
                 </Button>
               </div>
             </form>

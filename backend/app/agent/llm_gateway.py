@@ -2,12 +2,13 @@
 Unified LLM Gateway for Persona AI.
 Supports Groq (Llama 3.3 70B), OpenAI, Anthropic, and local companion simulation fallback.
 """
+import time
 import re
-import json
 import logging
 import httpx
-from typing import Tuple, Dict, Any, Optional
+from typing import Tuple, Optional
 from app.core.config import settings
+from app.core.observability import observability
 
 logger = logging.getLogger(__name__)
 
@@ -97,11 +98,22 @@ class LLMGateway:
             "max_tokens": 600,
         }
 
+        t0 = time.perf_counter()
         async with httpx.AsyncClient(timeout=15.0) as client:
             response = await client.post(base_url, headers=headers, json=payload)
             response.raise_for_status()
             data = response.json()
             raw_text = data["choices"][0]["message"]["content"].strip()
+            latency_ms = (time.perf_counter() - t0) * 1000
+
+            observability.trace_generation(
+                name="openai_compatible_turn",
+                model=model,
+                input_messages=messages,
+                output_text=raw_text,
+                latency_ms=latency_ms,
+            )
+
             return cls._parse_thought_and_reply(raw_text)
 
     @classmethod
@@ -132,11 +144,22 @@ class LLMGateway:
             "temperature": 0.85
         }
 
+        t0 = time.perf_counter()
         async with httpx.AsyncClient(timeout=15.0) as client:
             response = await client.post("https://api.anthropic.com/v1/messages", headers=headers, json=payload)
             response.raise_for_status()
             data = response.json()
             raw_text = data["content"][0]["text"].strip()
+            latency_ms = (time.perf_counter() - t0) * 1000
+
+            observability.trace_generation(
+                name="anthropic_turn",
+                model="claude-3-5-haiku-20241022",
+                input_messages=[{"role": "system", "content": system_prompt}, *messages],
+                output_text=raw_text,
+                latency_ms=latency_ms,
+            )
+
             return cls._parse_thought_and_reply(raw_text)
 
     @classmethod

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -59,6 +59,62 @@ export default function RootLayout() {
         />
         <Stack.Screen
           name="persona/create"
+          options={{
+            presentation: 'modal',
+            animation: 'slide_from_bottom',
+          }}
+        />
+        <Stack.Screen
+          name="paywall"
+          options={{
+            presentation: 'modal',
+            animation: 'slide_from_bottom',
+          }}
+        />
+        <Stack.Screen
+          name="stories"
+          options={{
+            presentation: 'modal',
+            animation: 'slide_from_bottom',
+          }}
+        />
+        <Stack.Screen
+          name="telemetry"
+          options={{
+            presentation: 'modal',
+            animation: 'slide_from_bottom',
+          }}
+        />
+        <Stack.Screen
+          name="letters"
+          options={{
+            presentation: 'modal',
+            animation: 'slide_from_bottom',
+          }}
+        />
+        <Stack.Screen
+          name="together"
+          options={{
+            presentation: 'modal',
+            animation: 'slide_from_bottom',
+          }}
+        />
+        <Stack.Screen
+          name="lounge"
+          options={{
+            presentation: 'modal',
+            animation: 'slide_from_bottom',
+          }}
+        />
+        <Stack.Screen
+          name="cbt"
+          options={{
+            presentation: 'modal',
+            animation: 'slide_from_bottom',
+          }}
+        />
+        <Stack.Screen
+          name="lifesim"
           options={{
             presentation: 'modal',
             animation: 'slide_from_bottom',

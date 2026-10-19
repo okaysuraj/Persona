@@ -4,197 +4,29 @@ Coordinates LangGraph execution, conversation persistence, memory consolidation,
 """
 import json
 import asyncio
-from datetime import datetime, timezone
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc
+from sqlalchemy import select
 from app.core.database import get_db, AsyncSessionLocal
 from app.core.security import decode_access_token
-from app.api.v1.auth import get_current_user, get_optional_current_user
+from app.api.dependencies import get_current_or_demo_user
 from app.models.user import User
 from app.models.persona import Persona
 from app.models.relationship import RelationshipState
 from app.models.message import Conversation, Message
-from app.models.memory import UserFact, EpisodicMemory
-from app.schemas.chat import SendMessageRequest, MessageResponse, ConversationResponse
-from app.agent.graph import companion_graph
+from app.schemas.chat import SendMessageRequest, MessageResponse, VisionInspectRequest, LoungeTurnRequest, LoungeTurnResponse, LoungePersonaTurn
+from app.services.chat import get_or_create_conversation, execute_cognitive_cycle
+
 
 router = APIRouter(prefix="/chat", tags=["chat"])
-
-
-async def _get_or_create_conversation(db: AsyncSession, user_id: str, persona_id: str) -> Conversation:
-    result = await db.execute(
-        select(Conversation)
-        .where(Conversation.user_id == user_id, Conversation.persona_id == persona_id)
-        .order_by(desc(Conversation.updated_at))
-    )
-    conv = result.scalars().first()
-    if not conv:
-        conv = Conversation(user_id=user_id, persona_id=persona_id, title="Chat Session")
-        db.add(conv)
-        await db.commit()
-        await db.refresh(conv)
-    return conv
-
-
-async def _execute_cognitive_cycle(
-    db: AsyncSession,
-    user: User,
-    persona: Persona,
-    conv: Conversation,
-    user_text: str,
-    media_type: str = "text"
-):
-    # 1. Fetch relationship state
-    result = await db.execute(
-        select(RelationshipState).where(
-            RelationshipState.user_id == user.id,
-            RelationshipState.persona_id == persona.id
-        )
-    )
-    rel = result.scalar_one_or_none()
-    if not rel:
-        rel = RelationshipState(user_id=user.id, persona_id=persona.id)
-        db.add(rel)
-        await db.commit()
-        await db.refresh(rel)
-
-    # 2. Fetch known user facts
-    facts_res = await db.execute(
-        select(UserFact).where(
-            UserFact.user_id == user.id,
-            UserFact.persona_id == persona.id
-        )
-    )
-    facts = [{"category": f.category, "key": f.key, "value": f.value} for f in facts_res.scalars().all()]
-
-    # 3. Fetch past episodic memories
-    mems_res = await db.execute(
-        select(EpisodicMemory).where(
-            EpisodicMemory.user_id == user.id,
-            EpisodicMemory.persona_id == persona.id
-        ).order_by(desc(EpisodicMemory.created_at)).limit(5)
-    )
-    mems = [{"summary": m.summary, "emotional_significance": m.emotional_significance} for m in mems_res.scalars().all()]
-
-    # 4. Save User's incoming message
-    user_msg = Message(
-        conversation_id=conv.id,
-        sender_type="user",
-        content=user_text,
-        media_type=media_type
-    )
-    db.add(user_msg)
-    await db.commit()
-
-    # 5. Execute LangGraph Cognitive Engine
-    state_input = {
-        "user_id": user.id,
-        "persona_id": persona.id,
-        "conversation_id": conv.id,
-        "user_input": user_text,
-        "input_media_type": media_type,
-        "recent_messages": [],
-        "persona": {
-            "name": persona.name,
-            "gender": persona.gender,
-            "archetype": persona.archetype,
-            "system_prompt": persona.system_prompt,
-            "backstory": persona.backstory,
-            "avatar_url": persona.avatar_url,
-            "speech_style": persona.speech_style or {},
-        },
-        "relationship": {
-            "intimacy_level": rel.intimacy_level,
-            "stage": rel.stage,
-            "mood_state": rel.mood_state or {},
-        },
-        "recalled_memories": mems,
-        "recalled_facts": facts,
-    }
-
-    graph_result = await companion_graph.ainvoke(state_input)
-
-    # 6. Save Assistant's reply
-    reply_text = graph_result.get("response_text", "...")
-    thought_trace = graph_result.get("inner_thought")
-    media_action = graph_result.get("media_action")
-
-    asst_msg = Message(
-        conversation_id=conv.id,
-        sender_type="assistant",
-        content=reply_text,
-        thought_trace=thought_trace,
-        media_type=media_action.get("type", "text") if media_action else "text",
-        media_url=media_action.get("url") if media_action else None,
-        metadata_json=media_action or {}
-    )
-    db.add(asst_msg)
-
-    # 7. Update Relationship State & Mood
-    xp_gain = graph_result.get("intimacy_xp_delta", 10)
-    rel.intimacy_xp += xp_gain
-    if rel.intimacy_xp >= rel.intimacy_level * 100:
-        rel.intimacy_level += 1
-        # Stage progression checks
-        if rel.intimacy_level >= 10:
-            rel.stage = "romantic" if persona.archetype in ["girlfriend", "boyfriend"] else "confidant"
-        elif rel.intimacy_level >= 5:
-            rel.stage = "close_friend"
-        elif rel.intimacy_level >= 2:
-            rel.stage = "friend"
-
-    # Apply mood delta
-    mood_delta = graph_result.get("mood_delta", {})
-    current_mood = dict(rel.mood_state or {})
-    for k, v in mood_delta.items():
-        current_mood[k] = round(max(0.0, min(1.0, current_mood.get(k, 0.5) + v)), 2)
-    rel.mood_state = current_mood
-    rel.last_interaction_at = datetime.now(timezone.utc)
-    conv.updated_at = datetime.now(timezone.utc)
-
-    # 8. Consolidate extracted facts
-    for fact_data in graph_result.get("new_facts_extracted", []):
-        fact_q = await db.execute(
-            select(UserFact).where(
-                UserFact.user_id == user.id,
-                UserFact.persona_id == persona.id,
-                UserFact.category == fact_data["category"],
-                UserFact.key == fact_data["key"]
-            )
-        )
-        existing_fact = fact_q.scalar_one_or_none()
-        if existing_fact:
-            existing_fact.value = fact_data["value"]
-        else:
-            db.add(UserFact(
-                user_id=user.id,
-                persona_id=persona.id,
-                category=fact_data["category"],
-                key=fact_data["key"],
-                value=fact_data["value"]
-            ))
-
-    # 9. Store milestone summary if generated
-    if graph_result.get("episodic_summary"):
-        db.add(EpisodicMemory(
-            user_id=user.id,
-            persona_id=persona.id,
-            summary=graph_result["episodic_summary"],
-            emotional_significance=8
-        ))
-
-    await db.commit()
-    await db.refresh(asst_msg)
-    return asst_msg
 
 
 @router.post("/send", response_model=MessageResponse)
 async def send_message(
     req: SendMessageRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_or_demo_user)
 ):
     """Send a message to a companion and return the agent's response."""
     persona_res = await db.execute(select(Persona).where(Persona.id == req.persona_id))
@@ -208,54 +40,118 @@ async def send_message(
         if not conv:
             raise HTTPException(status_code=404, detail="Conversation not found")
     else:
-        conv = await _get_or_create_conversation(db, current_user.id, persona.id)
+        conv = await get_or_create_conversation(db, current_user.id, persona.id)
 
-    assistant_msg = await _execute_cognitive_cycle(
+    user_ctx = req.user_context.model_dump() if req.user_context else None
+    assistant_msg = await execute_cognitive_cycle(
         db=db,
         user=current_user,
         persona=persona,
         conv=conv,
         user_text=req.content,
-        media_type=req.media_type or "text"
+        media_type=req.media_type or "text",
+        user_context=user_ctx
     )
     return assistant_msg
 
 
+@router.post("/inspect-vision", response_model=MessageResponse)
+async def inspect_vision(
+    req: VisionInspectRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_or_demo_user)
+):
+    """
+    Multimodal Visual Inspection ("See What I See"):
+    User shares a photo (outfit, surroundings, artwork, view) for companion appraisal.
+    """
+    persona_res = await db.execute(select(Persona).where(Persona.id == req.persona_id))
+    persona = persona_res.scalar_one_or_none()
+    if not persona:
+        raise HTTPException(status_code=404, detail="Persona not found")
+
+    conv = await get_or_create_conversation(db, current_user.id, persona.id)
+    user_ctx = req.user_context.model_dump() if req.user_context else None
+    user_msg_content = req.user_question or "Look at what I'm seeing right now!"
+    img_url = req.image_url or "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=800"
+
+    vision_meta = {"image_url": img_url, "question": user_msg_content}
+    assistant_msg = await execute_cognitive_cycle(
+        db=db,
+        user=current_user,
+        persona=persona,
+        conv=conv,
+        user_text=user_msg_content,
+        media_type="image",
+        user_context=user_ctx,
+        vision_data=vision_meta
+    )
+    return assistant_msg
+
+
+@router.post("/lounge/turn", response_model=LoungeTurnResponse)
+async def lounge_group_turn(
+    req: LoungeTurnRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_or_demo_user)
+):
+    """
+    Multi-Persona Group Dynamics ("The Lounge"):
+    Two or more companions engage with the user and banter thoughtfully with each other!
+    """
+    res = await db.execute(select(Persona).where(Persona.id.in_(req.persona_ids)))
+    persona_map = {p.id: p for p in res.scalars().all()}
+    personas = [persona_map[pid] for pid in req.persona_ids if pid in persona_map]
+    if len(personas) < 2:
+        raise HTTPException(status_code=400, detail="At least 2 valid personas required for The Lounge")
+
+    turns: List[LoungePersonaTurn] = []
+
+    for i, persona in enumerate(personas):
+        conv = await get_or_create_conversation(db, current_user.id, persona.id)
+        companion_prompt = req.content
+        if i > 0 and turns:
+            prev = turns[i - 1]
+            companion_prompt = (
+                f"{req.content}\n\n[In The Lounge, responding also to {prev.persona_name} who remarked: "
+                f"'{prev.content[:100]}...']"
+            )
+
+        asst_msg = await execute_cognitive_cycle(
+            db=db,
+            user=current_user,
+            persona=persona,
+            conv=conv,
+            user_text=companion_prompt,
+            media_type="text"
+        )
+
+        turns.append(LoungePersonaTurn(
+            persona_id=persona.id,
+            persona_name=persona.name,
+            avatar_url=persona.avatar_url,
+            archetype=persona.archetype,
+            content=asst_msg.content,
+            thought_trace=asst_msg.thought_trace
+        ))
+
+    return LoungeTurnResponse(
+        user_message=req.content,
+        theme=req.theme or "fireside evening parlor",
+        turns=turns,
+        group_harmony_xp=25
+    )
+
+
 @router.get("/conversations/{persona_id}/messages", response_model=List[MessageResponse])
+@router.get("/messages", response_model=List[MessageResponse], include_in_schema=False)
 async def get_messages(
     persona_id: str,
     limit: int = 50,
     db: AsyncSession = Depends(get_db),
-    current_user: Optional[User] = Depends(get_optional_current_user)
+    current_user: User = Depends(get_current_or_demo_user)
 ):
-    if not current_user:
-        res = await db.execute(select(User).where(User.email == "alex@companion.ai"))
-        current_user = res.scalar_one_or_none()
-    if not current_user:
-        return []
-    conv = await _get_or_create_conversation(db, current_user.id, persona_id)
-    res = await db.execute(
-        select(Message)
-        .where(Message.conversation_id == conv.id)
-        .order_by(Message.created_at)
-        .limit(limit)
-    )
-    return res.scalars().all()
-
-
-@router.get("/messages", response_model=List[MessageResponse])
-async def get_messages_query(
-    persona_id: str,
-    limit: int = 50,
-    db: AsyncSession = Depends(get_db),
-    current_user: Optional[User] = Depends(get_optional_current_user)
-):
-    if not current_user:
-        res = await db.execute(select(User).where(User.email == "alex@companion.ai"))
-        current_user = res.scalar_one_or_none()
-    if not current_user:
-        return []
-    conv = await _get_or_create_conversation(db, current_user.id, persona_id)
+    conv = await get_or_create_conversation(db, current_user.id, persona_id)
     res = await db.execute(
         select(Message)
         .where(Message.conversation_id == conv.id)
@@ -272,12 +168,12 @@ async def websocket_chat(websocket: WebSocket, persona_id: str, token: Optional[
     Yields inner thought events, streaming tokens, emotion updates, and media.
     """
     await websocket.accept()
-    
+
     # Authenticate token from query param
     if not token:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
-    
+
     try:
         payload = decode_access_token(token)
         user_id = payload.get("sub")
@@ -290,12 +186,12 @@ async def websocket_chat(websocket: WebSocket, persona_id: str, token: Optional[
         user = user_res.scalar_one_or_none()
         persona_res = await db.execute(select(Persona).where(Persona.id == persona_id))
         persona = persona_res.scalar_one_or_none()
-        
+
         if not user or not persona:
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
             return
 
-        conv = await _get_or_create_conversation(db, user.id, persona.id)
+        conv = await get_or_create_conversation(db, user.id, persona.id)
 
         try:
             while True:
@@ -309,7 +205,7 @@ async def websocket_chat(websocket: WebSocket, persona_id: str, token: Optional[
                 await websocket.send_json({"type": "status", "content": "thinking"})
 
                 # Execute cycle
-                asst_msg = await _execute_cognitive_cycle(
+                asst_msg = await execute_cognitive_cycle(
                     db=db,
                     user=user,
                     persona=persona,

@@ -1,4 +1,3 @@
-import React from 'react';
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -38,7 +37,7 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Companions',
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color }) => (
             <Feather name="users" size={18} color={color} />
           ),
         }}
@@ -47,7 +46,7 @@ export default function TabLayout() {
         name="chat"
         options={{
           title: 'Dialogue',
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color }) => (
             <Feather name="message-square" size={18} color={color} />
           ),
         }}
@@ -56,7 +55,7 @@ export default function TabLayout() {
         name="memory"
         options={{
           title: 'Vault',
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color }) => (
             <Feather name="book-open" size={18} color={color} />
           ),
         }}
@@ -65,7 +64,7 @@ export default function TabLayout() {
         name="gallery"
         options={{
           title: 'Portraits',
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color }) => (
             <Feather name="image" size={18} color={color} />
           ),
         }}

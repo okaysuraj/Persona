@@ -1,20 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  RefreshControl,
-  Alert,
-  Modal,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
+import { styles } from '../../src/styles/tabs/memory';
+import { useEffect, useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Alert, Modal, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { Colors, BorderRadius, Spacing } from '../../src/constants/theme';
+import { Colors, Spacing } from '../../src/constants/theme';
 import { DoubleBezelCard } from '../../src/components/common/DoubleBezelCard';
 import { GlowButton } from '../../src/components/common/GlowButton';
 import { api } from '../../src/services/api';
@@ -63,8 +52,11 @@ export default function MemoryVaultScreen() {
   const [loading, setLoading] = useState(false);
   const [facts, setFacts] = useState<any[]>(DEFAULT_SEED_FACTS);
   const [episodicMemories, setEpisodicMemories] = useState<any[]>(DEFAULT_SEED_MILESTONES);
+  const [temporalNodes, setTemporalNodes] = useState<any[]>([]);
+  const [psychometrics, setPsychometrics] = useState<any | null>(null);
+  const [isConsolidating, setIsConsolidating] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<'facts' | 'milestones'>('facts');
+  const [activeTab, setActiveTab] = useState<'facts' | 'milestones' | 'graph' | 'psychometrics'>('facts');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
   // Add Fact Modal state
@@ -77,17 +69,47 @@ export default function MemoryVaultScreen() {
     if (!activePersona) return;
     setLoading(true);
     try {
-      const data = await api.getMemories(activePersona.id);
-      if (data && data.facts && data.facts.length > 0) {
-        setFacts(data.facts);
+      const [memData, graphData, psychData] = await Promise.all([
+        api.getMemories(activePersona.id).catch(() => null),
+        api.getTemporalGraph(activePersona.id).catch(() => []),
+        api.getUserPsychometrics(activePersona.id).catch(() => null),
+      ]);
+
+      if (memData?.facts?.length) {
+        setFacts(memData.facts);
       }
-      if (data && data.episodic_memories && data.episodic_memories.length > 0) {
-        setEpisodicMemories(data.episodic_memories);
+      if (memData?.episodic_memories?.length) {
+        setEpisodicMemories(memData.episodic_memories);
+      }
+      if (graphData?.length) {
+        setTemporalNodes(graphData);
+      }
+      if (psychData) {
+        setPsychometrics(psychData);
       }
     } catch (_) {
       // Fallback kept intact
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSleepConsolidation = async () => {
+    if (!activePersona) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setIsConsolidating(true);
+    try {
+      const res = await api.triggerSleepConsolidation(activePersona.id);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert(
+        'Sleep Consolidation Complete',
+        `Cognitive Cycle Finished:\n• ${res.contradictions_resolved || 0} contradictions resolved\n• ${res.edges_formed || 0} temporal edges synthesized\n\n"${res.episodic_synthesis || 'Knowledge graph updated.'}"`
+      );
+      await loadMemories();
+    } catch (err: any) {
+      Alert.alert('Consolidation Error', err.message || 'Failed to trigger sleep consolidation');
+    } finally {
+      setIsConsolidating(false);
     }
   };
 
@@ -162,14 +184,34 @@ export default function MemoryVaultScreen() {
               </Text>
             </View>
 
-            <TouchableOpacity
-              activeOpacity={0.75}
-              onPress={() => setShowAddModal(true)}
-              style={styles.addFactQuickBtn}
-            >
-              <Feather name="plus" size={13} color={Colors.text} />
-              <Text style={styles.addFactQuickText}>Add Fact</Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <TouchableOpacity
+                activeOpacity={0.75}
+                onPress={handleSleepConsolidation}
+                disabled={isConsolidating}
+                style={[
+                  styles.addFactQuickBtn,
+                  {
+                    backgroundColor: 'rgba(99, 102, 241, 0.12)',
+                    borderColor: 'rgba(99, 102, 241, 0.3)',
+                  },
+                ]}
+              >
+                <Feather name="moon" size={13} color="#818CF8" />
+                <Text style={[styles.addFactQuickText, { color: '#818CF8' }]}>
+                  {isConsolidating ? 'Consolidating...' : 'Sleep Cycle'}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                activeOpacity={0.75}
+                onPress={() => setShowAddModal(true)}
+                style={styles.addFactQuickBtn}
+              >
+                <Feather name="plus" size={13} color={Colors.text} />
+                <Text style={styles.addFactQuickText}>Add Fact</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           <Text style={styles.headerTitle}>Memory Vault</Text>
@@ -178,23 +220,23 @@ export default function MemoryVaultScreen() {
           </Text>
         </View>
 
-        {/* Tab Toggle: Remembered Facts vs Milestones */}
-        <View style={styles.tabToggleRow}>
+        {/* Tab Toggle: Remembered Facts vs Milestones vs Temporal Graph vs Psychometrics */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ marginBottom: Spacing.md }}
+          contentContainerStyle={{ gap: 6 }}
+        >
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               setActiveTab('facts');
             }}
-            style={[styles.tabButton, activeTab === 'facts' && styles.tabButtonActive]}
+            style={[styles.tabButtonPill, activeTab === 'facts' && styles.tabButtonPillActive]}
           >
-            <Text
-              style={[
-                styles.tabButtonText,
-                activeTab === 'facts' && styles.tabButtonTextActive,
-              ]}
-            >
-              Remembered Facts ({facts.length})
+            <Text style={[styles.tabButtonText, activeTab === 'facts' && styles.tabButtonTextActive]}>
+              Facts ({facts.length})
             </Text>
           </TouchableOpacity>
 
@@ -204,21 +246,39 @@ export default function MemoryVaultScreen() {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               setActiveTab('milestones');
             }}
-            style={[
-              styles.tabButton,
-              activeTab === 'milestones' && styles.tabButtonActive,
-            ]}
+            style={[styles.tabButtonPill, activeTab === 'milestones' && styles.tabButtonPillActive]}
           >
-            <Text
-              style={[
-                styles.tabButtonText,
-                activeTab === 'milestones' && styles.tabButtonTextActive,
-              ]}
-            >
+            <Text style={[styles.tabButtonText, activeTab === 'milestones' && styles.tabButtonTextActive]}>
               Milestones ({episodicMemories.length})
             </Text>
           </TouchableOpacity>
-        </View>
+
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setActiveTab('graph');
+            }}
+            style={[styles.tabButtonPill, activeTab === 'graph' && styles.tabButtonPillActive]}
+          >
+            <Text style={[styles.tabButtonText, activeTab === 'graph' && styles.tabButtonTextActive]}>
+              Temporal Graph ({temporalNodes.length})
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setActiveTab('psychometrics');
+            }}
+            style={[styles.tabButtonPill, activeTab === 'psychometrics' && styles.tabButtonPillActive]}
+          >
+            <Text style={[styles.tabButtonText, activeTab === 'psychometrics' && styles.tabButtonTextActive]}>
+              Psychometrics
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
 
         {/* Category Filter Chips for Facts */}
         {activeTab === 'facts' && (
@@ -297,7 +357,7 @@ export default function MemoryVaultScreen() {
               ))
             )}
           </View>
-        ) : (
+        ) : activeTab === 'milestones' ? (
           <View style={styles.itemsList}>
             {episodicMemories.length === 0 ? (
               <View style={styles.emptyCard}>
@@ -326,6 +386,159 @@ export default function MemoryVaultScreen() {
                   <Text style={styles.milestoneSummary}>{mem.summary}</Text>
                 </DoubleBezelCard>
               ))
+            )}
+          </View>
+        ) : activeTab === 'graph' ? (
+          <View style={styles.itemsList}>
+            {temporalNodes.length === 0 ? (
+              <View style={styles.emptyCard}>
+                <Feather name="git-commit" size={24} color={Colors.textMuted} />
+                <Text style={styles.emptyTitle}>No Temporal Graph Nodes</Text>
+                <Text style={styles.emptySubtitle}>
+                  Tap "Sleep Cycle" to run nocturnal memory consolidation and synthesize bi-temporal causal edges.
+                </Text>
+              </View>
+            ) : (
+              temporalNodes.map((node) => (
+                <DoubleBezelCard
+                  key={node.id}
+                  style={styles.factCardOuter}
+                  innerStyle={styles.factCardInner}
+                >
+                  <View style={styles.factTopRow}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <View
+                        style={[
+                          styles.factCategoryBadge,
+                          {
+                            backgroundColor: node.is_active
+                              ? 'rgba(16, 185, 129, 0.12)'
+                              : 'rgba(239, 68, 68, 0.12)',
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.factCategoryText,
+                            { color: node.is_active ? '#34D399' : '#F87171' },
+                          ]}
+                        >
+                          {node.is_active ? 'ACTIVE TRUTH' : 'SUPERSEDED'}
+                        </Text>
+                      </View>
+                      <Text style={{ fontSize: 10, color: Colors.textMuted }}>
+                        {Math.round(node.confidence * 100)}% Confidence
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Text style={styles.factValue}>{node.object_value}</Text>
+                  <Text style={styles.factKey}>
+                    {node.subject} ➔ {node.predicate}
+                  </Text>
+
+                  {node.valid_from && (
+                    <Text style={{ fontSize: 11, color: Colors.textMuted, marginTop: 2 }}>
+                      Valid: {new Date(node.valid_from).toLocaleDateString()}
+                      {node.valid_to ? ` - ${new Date(node.valid_to).toLocaleDateString()}` : ' - Present'}
+                    </Text>
+                  )}
+
+                  {node.causal_links && node.causal_links.length > 0 && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                      <Feather name="link" size={11} color={Colors.terracotta} />
+                      <Text style={{ fontSize: 10, color: Colors.terracotta }}>
+                        Causal Edges: {node.causal_links.join(', ')}
+                      </Text>
+                    </View>
+                  )}
+                </DoubleBezelCard>
+              ))
+            )}
+          </View>
+        ) : (
+          <View style={styles.itemsList}>
+            {psychometrics ? (
+              <>
+                <DoubleBezelCard style={styles.factCardOuter} innerStyle={styles.factCardInner}>
+                  <View style={styles.factTopRow}>
+                    <View style={[styles.factCategoryBadge, { backgroundColor: 'rgba(168, 85, 247, 0.15)' }]}>
+                      <Text style={[styles.factCategoryText, { color: '#C084FC' }]}>
+                        ATTACHMENT & BOND
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={styles.factValue}>{psychometrics.attachment_style}</Text>
+                  <Text style={styles.factKey}>
+                    Love Language: {psychometrics.primary_love_language}
+                  </Text>
+                  <Text style={{ fontSize: 11, color: Colors.textMuted, marginTop: 4 }}>
+                    Emotional Stability Index: {Math.round((psychometrics.emotional_stability_score || 0.8) * 100)}%
+                  </Text>
+                </DoubleBezelCard>
+
+                {psychometrics.big_five && (
+                  <DoubleBezelCard style={styles.factCardOuter} innerStyle={styles.factCardInner}>
+                    <Text style={[styles.modalSuperTitle, { marginBottom: 8 }]}>BIG FIVE PERSONALITY ATTUNEMENT</Text>
+                    {Object.entries(psychometrics.big_five).map(([trait, val]: [string, any]) => (
+                      <View key={trait} style={{ marginBottom: 6 }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 }}>
+                          <Text style={{ fontSize: 11, color: Colors.text, textTransform: 'capitalize' }}>
+                            {trait}
+                          </Text>
+                          <Text style={{ fontSize: 11, color: Colors.terracotta, fontWeight: '600' }}>
+                            {Math.round(val * 100)}%
+                          </Text>
+                        </View>
+                        <View style={{ height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.08)' }}>
+                          <View
+                            style={{
+                              height: 4,
+                              borderRadius: 2,
+                              backgroundColor: Colors.terracotta,
+                              width: `${Math.round(val * 100)}%`,
+                            }}
+                          />
+                        </View>
+                      </View>
+                    ))}
+                  </DoubleBezelCard>
+                )}
+
+                {psychometrics.cognitive_distortions_noticed?.length > 0 && (
+                  <DoubleBezelCard style={styles.factCardOuter} innerStyle={styles.factCardInner}>
+                    <Text style={[styles.modalSuperTitle, { marginBottom: 6, color: '#F59E0B' }]}>
+                      COGNITIVE BIASES OBSERVED
+                    </Text>
+                    {psychometrics.cognitive_distortions_noticed.map((dist: string, idx: number) => (
+                      <Text key={idx} style={{ fontSize: 12, color: Colors.textSecondary, marginBottom: 2 }}>
+                        • {dist}
+                      </Text>
+                    ))}
+                  </DoubleBezelCard>
+                )}
+
+                {psychometrics.growth_recommendations?.length > 0 && (
+                  <DoubleBezelCard style={styles.factCardOuter} innerStyle={styles.factCardInner}>
+                    <Text style={[styles.modalSuperTitle, { marginBottom: 6, color: '#10B981' }]}>
+                      GROWTH & FLOURISHING ADVICE
+                    </Text>
+                    {psychometrics.growth_recommendations.map((rec: string, idx: number) => (
+                      <Text key={idx} style={{ fontSize: 12, color: Colors.textSecondary, marginBottom: 2 }}>
+                        ✓ {rec}
+                      </Text>
+                    ))}
+                  </DoubleBezelCard>
+                )}
+              </>
+            ) : (
+              <View style={styles.emptyCard}>
+                <Feather name="activity" size={24} color={Colors.textMuted} />
+                <Text style={styles.emptyTitle}>No Psychometrics Deduced</Text>
+                <Text style={styles.emptySubtitle}>
+                  Trigger a sleep consolidation cycle to analyze conversational sentiment and deduce attachment models.
+                </Text>
+              </View>
             )}
           </View>
         )}
@@ -424,309 +637,3 @@ export default function MemoryVaultScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background, // #121211
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: Spacing.md,
-    paddingTop: 52,
-    paddingBottom: 70,
-  },
-  header: {
-    marginBottom: Spacing.lg,
-  },
-  headerTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  headerBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingVertical: 3,
-    paddingHorizontal: 8,
-    borderRadius: 9999,
-    backgroundColor: Colors.terracottaBg,
-  },
-  headerBadgeText: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: Colors.terracotta,
-    letterSpacing: 1.2,
-  },
-  addFactQuickBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: BorderRadius.xs,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.09)',
-  },
-  addFactQuickText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.text,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: Colors.text,
-    letterSpacing: -0.3,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginTop: 4,
-    lineHeight: 20,
-  },
-  tabToggleRow: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    borderRadius: BorderRadius.sm,
-    padding: 3,
-    marginBottom: Spacing.md,
-  },
-  tabButton: {
-    flex: 1,
-    paddingVertical: 9,
-    alignItems: 'center',
-    borderRadius: BorderRadius.xs,
-  },
-  tabButtonActive: {
-    backgroundColor: '#1E1D1B',
-  },
-  tabButtonText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.textMuted,
-  },
-  tabButtonTextActive: {
-    color: Colors.text,
-  },
-  categoryScroll: {
-    marginBottom: Spacing.md,
-  },
-  categoryContent: {
-    gap: 8,
-  },
-  categoryChip: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.035)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-  },
-  categoryChipActive: {
-    backgroundColor: Colors.terracottaBg,
-    borderColor: Colors.terracottaBorder,
-  },
-  categoryChipText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: Colors.textMuted,
-    letterSpacing: 0.8,
-  },
-  categoryChipTextActive: {
-    color: Colors.terracotta,
-  },
-  itemsList: {
-    gap: 12,
-  },
-  factCardOuter: {
-    width: '100%',
-  },
-  factCardInner: {
-    padding: 14,
-    gap: 6,
-  },
-  factTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  factCategoryBadge: {
-    paddingVertical: 2,
-    paddingHorizontal: 7,
-    borderRadius: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-  },
-  factCategoryText: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: '#D5CEC4',
-    letterSpacing: 1.0,
-  },
-  deleteBtn: {
-    padding: 4,
-  },
-  factValue: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#F5F2EC',
-    lineHeight: 22,
-  },
-  factKey: {
-    fontSize: 12,
-    color: Colors.textMuted,
-  },
-  milestoneDepthRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  depthTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    backgroundColor: Colors.terracottaBg,
-  },
-  depthText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: Colors.terracotta,
-    letterSpacing: 1.0,
-  },
-  milestoneSummary: {
-    fontSize: 14,
-    lineHeight: 22,
-    color: Colors.textSecondary,
-    fontStyle: 'italic',
-  },
-  emptyCard: {
-    paddingVertical: 40,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#191817',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-    gap: 8,
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.text,
-    marginTop: 6,
-  },
-  emptySubtitle: {
-    fontSize: 13,
-    color: Colors.textMuted,
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-
-  // Modal styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
-    justifyContent: 'flex-end',
-  },
-  modalContainer: {
-    backgroundColor: '#191817',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    borderTopWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.md,
-    paddingBottom: 40,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
-  },
-  modalSuperTitle: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: Colors.terracotta,
-    letterSpacing: 1.6,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: Colors.text,
-  },
-  modalCloseBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalScroll: {
-    maxHeight: 400,
-  },
-  inputLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: Colors.textMuted,
-    letterSpacing: 1.2,
-    marginTop: 12,
-    marginBottom: 6,
-  },
-  inputField: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: BorderRadius.sm,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    color: Colors.text,
-    fontSize: 14,
-  },
-  archetypeChipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  archetypeChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-  },
-  archetypeChipActive: {
-    backgroundColor: Colors.terracotta,
-    borderColor: Colors.terracotta,
-  },
-  archetypeChipText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-    letterSpacing: 0.8,
-  },
-  archetypeChipTextActive: {
-    color: '#FFF',
-  },
-  modalSubmitWrapper: {
-    marginTop: 20,
-    marginBottom: 10,
-  },
-  modalSubmitBtn: {
-    width: '100%',
-  },
-});

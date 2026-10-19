@@ -1,0 +1,237 @@
+// Static presentation values for the matching route.
+import { StyleSheet } from 'react-native';
+import { Colors, BorderRadius, Spacing } from '../constants/theme';
+
+export const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#121211',
+  },
+  safeArea: {
+    flex: 1,
+  },
+  topHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.xs,
+  },
+  closeBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: 11,
+    letterSpacing: 1.6,
+    color: Colors.textMuted,
+    fontWeight: '700',
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.xl,
+  },
+  heroBlock: {
+    alignItems: 'center',
+    marginVertical: Spacing.md,
+  },
+  atmosphereBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 9999,
+    backgroundColor: Colors.terracottaBg,
+    marginBottom: 10,
+  },
+  badgeText: {
+    fontSize: 9,
+    letterSpacing: 1.4,
+    color: Colors.terracotta,
+    fontWeight: '700',
+  },
+  heroTitle: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#F5F2EC',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  heroSubtitle: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    paddingHorizontal: Spacing.md,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    backgroundColor: '#1E1D1B',
+    borderRadius: BorderRadius.md,
+    padding: 4,
+    marginVertical: Spacing.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+  },
+  toggleBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: BorderRadius.sm,
+    gap: 6,
+  },
+  toggleBtnActive: {
+    backgroundColor: '#2A2826',
+  },
+  toggleBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.textMuted,
+  },
+  toggleBtnTextActive: {
+    color: '#F5F2EC',
+  },
+  discountPill: {
+    backgroundColor: Colors.terracotta,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  discountText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  plansContainer: {
+    gap: Spacing.md,
+    marginBottom: Spacing.xl,
+  },
+  planCard: {
+    backgroundColor: '#1A1918',
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    padding: Spacing.lg,
+    position: 'relative',
+  },
+  planCardSelected: {
+    borderColor: Colors.terracotta,
+    backgroundColor: '#1E1C1A',
+  },
+  planCardSelectedVip: {
+    borderColor: '#A855F7',
+    backgroundColor: '#1C1824',
+  },
+  popularBadge: {
+    position: 'absolute',
+    top: -10,
+    right: 20,
+    backgroundColor: Colors.terracotta,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  popularText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+  },
+  planHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
+    paddingBottom: Spacing.md,
+    marginBottom: Spacing.md,
+  },
+  planName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#F5F2EC',
+  },
+  planSub: {
+    fontSize: 11,
+    color: Colors.textMuted,
+    marginTop: 2,
+  },
+  priceGroup: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  priceAmount: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#F5F2EC',
+  },
+  pricePer: {
+    fontSize: 11,
+    color: Colors.textMuted,
+    marginLeft: 2,
+  },
+  featuresList: {
+    gap: 10,
+  },
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  featureText: {
+    fontSize: 12,
+    color: '#E5E0D8',
+    flex: 1,
+  },
+  actionBtn: {
+    backgroundColor: Colors.terracotta,
+    paddingVertical: 16,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: Colors.terracotta,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 4,
+    marginBottom: Spacing.lg,
+  },
+  btnContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  actionBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  footerLinks: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: Spacing.sm,
+  },
+  footerLinkText: {
+    fontSize: 10,
+    color: Colors.textMuted,
+    textDecorationLine: 'underline',
+  },
+  footerDot: {
+    color: Colors.textMuted,
+    fontSize: 10,
+  },
+});

@@ -1,13 +1,6 @@
 import React, { useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  withSequence,
-  Easing,
-} from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming, withSequence, cancelAnimation, Easing } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../../constants/theme';
 
@@ -63,6 +56,14 @@ export const AudioOrb: React.FC<AudioOrbProps> = ({ isSpeaking = false, size = 1
       -1,
       false
     );
+
+    return () => {
+      cancelAnimation(scale);
+      cancelAnimation(ring1Scale);
+      cancelAnimation(ring1Opacity);
+      cancelAnimation(ring2Scale);
+      cancelAnimation(ring2Opacity);
+    };
   }, [isSpeaking]);
 
   const orbStyle = useAnimatedStyle(() => ({

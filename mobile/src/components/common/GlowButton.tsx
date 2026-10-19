@@ -1,15 +1,7 @@
 import React from 'react';
-import {
-  TouchableOpacity,
-  Text,
-  StyleSheet,
-  ViewStyle,
-  TextStyle,
-  ActivityIndicator,
-  View,
-} from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle, ActivityIndicator, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { Colors, BorderRadius, Spacing } from '../../constants/theme';
+import { Colors, BorderRadius } from '../../constants/theme';
 
 interface GlowButtonProps {
   title: string;

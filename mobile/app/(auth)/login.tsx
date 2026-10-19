@@ -1,14 +1,5 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-} from 'react-native';
+import { useState } from 'react';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Colors, BorderRadius, Spacing } from '../../src/constants/theme';
 import { GlowButton } from '../../src/components/common/GlowButton';

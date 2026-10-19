@@ -1,12 +1,8 @@
 import { create } from 'zustand';
 import { api } from '../services/api';
+import { ApiError } from '../services/http';
 import { storage } from '../services/storage';
-
-interface User {
-  id: string;
-  email: string;
-  display_name: string;
-}
+import type { AuthResponse, User } from '../types';
 
 interface AuthState {
   token: string | null;
@@ -14,95 +10,69 @@ interface AuthState {
   isLoading: boolean;
   isInitialized: boolean;
   error: string | null;
-
-  login: (email: string, pass: string) => Promise<void>;
-  register: (email: string, pass: string, name: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  token: null,
-  user: null,
-  isLoading: false,
-  isInitialized: false,
-  error: null,
+async function saveSession(data: AuthResponse, email: string) {
+  const user: User = { id: data.user_id, email, display_name: data.display_name };
+  await storage.saveAuthToken(data.access_token);
+  await storage.saveAuthUser(user);
+  api.setToken(data.access_token);
+  return { token: data.access_token, user };
+}
 
-  login: async (email, password) => {
+export const useAuthStore = create<AuthState>((set, get) => {
+  // Login and registration persist exactly the same session data.
+  async function authenticate(email: string, action: () => Promise<AuthResponse>) {
     set({ isLoading: true, error: null });
     try {
-      const data = await api.login({ email, password });
-      const user: User = { id: data.user_id, email, display_name: data.display_name };
-
-      api.setToken(data.access_token);
-      await storage.saveAuthToken(data.access_token);
-      await storage.saveAuthUser(user);
-
-      set({
-        token: data.access_token,
-        user,
-        isLoading: false,
-      });
-    } catch (err: any) {
-      set({ error: err.message, isLoading: false });
-      throw err;
+      set(await saveSession(await action(), email));
+    } catch (error) {
+      set({ error: error instanceof Error ? error.message : 'Unable to sign in.' });
+      throw error;
+    } finally {
+      set({ isLoading: false });
     }
-  },
+  }
 
-  register: async (email, password, displayName) => {
-    set({ isLoading: true, error: null });
-    try {
-      const data = await api.register({ email, password, display_name: displayName });
-      const user: User = { id: data.user_id, email, display_name: data.display_name };
+  return {
+    token: null,
+    user: null,
+    isLoading: false,
+    isInitialized: false,
+    error: null,
 
-      api.setToken(data.access_token);
-      await storage.saveAuthToken(data.access_token);
-      await storage.saveAuthUser(user);
+    login: (email, password) => authenticate(email, () => api.login({ email, password })),
+    register: (email, password, displayName) => authenticate(email, () => api.register({
+      email, password, display_name: displayName,
+    })),
 
-      set({
-        token: data.access_token,
-        user,
-        isLoading: false,
-      });
-    } catch (err: any) {
-      set({ error: err.message, isLoading: false });
-      throw err;
-    }
-  },
+    logout: async () => {
+      api.setToken(null);
+      set({ token: null, user: null, error: null });
+      await storage.removeAuthToken();
+    },
 
-  logout: async () => {
-    api.setToken(null);
-    await storage.removeAuthToken();
-    set({ token: null, user: null });
-  },
-
-  checkAuth: async () => {
-    try {
-      const savedToken = await storage.getAuthToken();
-      const savedUser = await storage.getAuthUser();
-
-      if (savedToken) {
-        api.setToken(savedToken);
-        set({ token: savedToken, user: savedUser, isInitialized: true });
-
-        // Verify with backend
+    checkAuth: async () => {
+      try {
+        const [token, user] = await Promise.all([storage.getAuthToken(), storage.getAuthUser()]);
+        if (!token) return;
+        api.setToken(token);
+        set({ token, user });
         try {
           const freshUser = await api.getMe();
           set({ user: freshUser });
           await storage.saveAuthUser(freshUser);
-        } catch (err: any) {
-          if (err.message && err.message.includes('401')) {
-            // Token expired
-            api.setToken(null);
-            await storage.removeAuthToken();
-            set({ token: null, user: null });
-          }
+        } catch (error) {
+          // An offline device can keep its session. An expired token cannot.
+          if (error instanceof ApiError && [401, 404].includes(error.status)) await get().logout();
         }
-      } else {
+      } finally {
         set({ isInitialized: true });
       }
-    } catch (_) {
-      set({ isInitialized: true });
-    }
-  },
-}));
+    },
+  };
+});

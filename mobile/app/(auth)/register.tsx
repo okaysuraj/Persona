@@ -1,15 +1,7 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-} from 'react-native';
+import { useState } from 'react';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
 import { Colors, BorderRadius, Spacing } from '../../src/constants/theme';
 import { GlowButton } from '../../src/components/common/GlowButton';
 import { useAuthStore } from '../../src/store/authStore';
@@ -20,12 +12,17 @@ export default function RegisterScreen() {
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [agreeEula, setAgreeEula] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
   const handleRegister = async () => {
     if (!displayName || !email || !password) {
       setErrorMessage('Please fill out all fields.');
+      return;
+    }
+    if (!agreeEula) {
+      setErrorMessage('Please agree to the Terms of Service & EULA to continue.');
       return;
     }
     setLoading(true);
@@ -103,6 +100,20 @@ export default function RegisterScreen() {
               style={styles.input}
             />
           </View>
+
+          {/* Apple App Store Guideline 1.2 Mandatory EULA Checkbox */}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => setAgreeEula(!agreeEula)}
+            style={styles.eulaRow}
+          >
+            <View style={[styles.checkbox, agreeEula && styles.checkboxActive]}>
+              {agreeEula && <Feather name="check" size={11} color="#FFFFFF" />}
+            </View>
+            <Text style={styles.eulaText}>
+              I agree to the <Text style={styles.eulaLink}>Terms of Service & EULA</Text>. I understand that Persona companions are AI and abusive content is prohibited.
+            </Text>
+          </TouchableOpacity>
 
           <GlowButton
             title="Create Sanctuary Account"
@@ -249,5 +260,37 @@ const styles = StyleSheet.create({
     color: Colors.terracotta,
     fontWeight: '600',
     fontSize: 14,
+  },
+  eulaRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginTop: Spacing.md,
+    paddingHorizontal: 2,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: '#1E1D1B',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  checkboxActive: {
+    backgroundColor: Colors.terracotta,
+    borderColor: Colors.terracotta,
+  },
+  eulaText: {
+    flex: 1,
+    fontSize: 11,
+    lineHeight: 16,
+    color: Colors.textMuted,
+  },
+  eulaLink: {
+    color: '#F5F2EC',
+    textDecorationLine: 'underline',
   },
 });

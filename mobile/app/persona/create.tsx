@@ -1,15 +1,5 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
+import { useState } from 'react';
+import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -38,12 +28,11 @@ const ARCHETYPES = [
 
 export default function CreatePersonaScreen() {
   const router = useRouter();
-  const fetchPersonas = useCompanionStore((state) => state.fetchPersonas);
   const setActivePersona = useCompanionStore((state) => state.setActivePersona);
 
   const [name, setName] = useState('');
   const [archetype, setArchetype] = useState('confidant');
-  const [gender, setGender] = useState('female');
+  const [gender] = useState('female');
   const [tagline, setTagline] = useState('');
   const [accentQuote, setAccentQuote] = useState('');
   const [backstory, setBackstory] = useState('');

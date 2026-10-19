@@ -1,3 +1,4 @@
+# Local PostgreSQL for the apps started manually on the host.
 services:
   postgres:
     image: pgvector/pgvector:pg16
@@ -17,15 +18,5 @@ services:
       timeout: 5s
       retries: 5
 
-  redis:
-    image: redis:7-alpine
-    container_name: persona_redis
-    restart: unless-stopped
-    ports:
-      - "6379:6379"
-    volumes:
-      - redisdata:/data
-
 volumes:
   pgdata:
-  redisdata:

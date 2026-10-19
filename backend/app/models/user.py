@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, DateTime
+from sqlalchemy import Column, String, Integer, DateTime
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 
@@ -15,6 +15,16 @@ class User(Base):
     timezone = Column(String(50), default="UTC")
     push_token = Column(String(255), nullable=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+    # Subscription and Monetization Tier
+    subscription_tier = Column(String(50), default="free")  # 'free', 'plus', 'vip'
+    subscription_status = Column(String(50), default="active")  # 'active', 'canceled', 'past_due'
+    stripe_customer_id = Column(String(100), nullable=True)
+
+    # Usage Quotas Tracking
+    messages_today = Column(Integer, default=0)
+    voice_seconds_used = Column(Integer, default=0)
+    photos_generated_count = Column(Integer, default=0)
 
     # Relationships
     personas = relationship("Persona", back_populates="creator", cascade="all, delete-orphan")

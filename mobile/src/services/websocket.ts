@@ -1,25 +1,12 @@
-import { Platform } from 'react-native';
-import Constants from 'expo-constants';
-
-const hostUri = Constants.expoConfig?.hostUri;
-const isTunnel = hostUri?.includes('exp.direct');
-const detectedHost = (!isTunnel && hostUri) ? hostUri.split(':')[0] : '192.168.1.51';
-
-const WS_BASE_URL =
-  process.env.EXPO_PUBLIC_WS_URL ||
-  (detectedHost
-    ? `ws://${detectedHost}:8000/api/v1/chat/stream`
-    : Platform.select({
-        android: 'ws://10.0.2.2:8000/api/v1/chat/stream',
-        default: 'ws://192.168.1.51:8000/api/v1/chat/stream',
-      }));
+import { WS_BASE_URL } from './config';
+import type { Relationship } from '../types';
 
 export interface WSCallbacks {
   onStatus?: (status: string) => void;
   onThought?: (thought: string) => void;
   onToken?: (token: string) => void;
   onMedia?: (media: any) => void;
-  onRelationshipUpdate?: (rel: any) => void;
+  onRelationshipUpdate?: (rel: Partial<Relationship>) => void;
   onDone?: (messageId: string) => void;
   onError?: (error: any) => void;
 }
@@ -31,6 +18,7 @@ export class AgentChatWebSocket {
   private callbacks: WSCallbacks;
   private isIntentionalDisconnect = false;
   private reconnectAttempts = 0;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(personaId: string, token: string, callbacks: WSCallbacks) {
     this.personaId = personaId;
@@ -40,7 +28,7 @@ export class AgentChatWebSocket {
 
   connect() {
     this.isIntentionalDisconnect = false;
-    const url = `${WS_BASE_URL}/${this.personaId}?token=${this.token}`;
+    const url = `${WS_BASE_URL}/${encodeURIComponent(this.personaId)}?token=${encodeURIComponent(this.token)}`;
 
     try {
       this.ws = new WebSocket(url);
@@ -84,7 +72,7 @@ export class AgentChatWebSocket {
       this.ws.onclose = () => {
         if (!this.isIntentionalDisconnect && this.reconnectAttempts < 3) {
           this.reconnectAttempts++;
-          setTimeout(() => this.connect(), 2000 * this.reconnectAttempts);
+          this.reconnectTimer = setTimeout(() => this.connect(), 2000 * this.reconnectAttempts);
         }
       };
     } catch (err) {
@@ -106,6 +94,8 @@ export class AgentChatWebSocket {
 
   disconnect() {
     this.isIntentionalDisconnect = true;
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = null;
     if (this.ws) {
       this.ws.close();
       this.ws = null;

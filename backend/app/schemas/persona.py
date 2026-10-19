@@ -16,16 +16,6 @@ class PersonaCreate(BaseModel):
     is_public: Optional[bool] = True
 
 
-class PersonaUpdate(BaseModel):
-    name: Optional[str] = None
-    tagline: Optional[str] = None
-    system_prompt: Optional[str] = None
-    backstory: Optional[str] = None
-    avatar_url: Optional[str] = None
-    voice_id: Optional[str] = None
-    speech_style: Optional[Dict[str, Any]] = None
-
-
 class PersonaResponse(BaseModel):
     id: str
     user_id: Optional[str]

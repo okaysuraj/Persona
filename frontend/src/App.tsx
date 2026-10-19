@@ -1,23 +1,39 @@
-import { useState, useEffect } from 'react';
-import type { Persona, Relationship, Message, UserFact, EpisodicMemory, PersonaCreateInput } from './types';
+import { useState, useEffect, lazy, Suspense } from 'react';
+import type { Persona, Relationship, Message, UserFact, EpisodicMemory, PersonaCreateInput, BillingStatus } from './types';
 import { api } from './services/api';
 import { Header } from './components/navigation/Header';
 import { PersonaSelector } from './components/persona/PersonaSelector';
 import { ChatInterface } from './components/chat/ChatInterface';
-import { AmbientVoiceModal } from './components/voice/AmbientVoiceModal';
-import { MemoryVaultModal } from './components/memory/MemoryVaultModal';
+
+// Lazy-loaded modal dialogs for minimal initial bundle and reduced heap memory usage
+const AmbientVoiceModal = lazy(() => import('./components/voice/AmbientVoiceModal').then((m) => ({ default: m.AmbientVoiceModal })));
+const MemoryVaultModal = lazy(() => import('./components/memory/MemoryVaultModal').then((m) => ({ default: m.MemoryVaultModal })));
+const PaywallModal = lazy(() => import('./components/billing/PaywallModal').then((m) => ({ default: m.PaywallModal })));
+const MomentsGalleryModal = lazy(() => import('./components/moments/MomentsGalleryModal').then((m) => ({ default: m.MomentsGalleryModal })));
+const StoriesFeedModal = lazy(() => import('./components/stories/StoriesFeedModal').then((m) => ({ default: m.StoriesFeedModal })));
+const AnalyticsDashboardModal = lazy(() => import('./components/analytics/AnalyticsDashboardModal').then((m) => ({ default: m.AnalyticsDashboardModal })));
+const LettersModal = lazy(() => import('./components/letters/LettersModal').then((m) => ({ default: m.LettersModal })));
+const TogetherModeModal = lazy(() => import('./components/together/TogetherModeModal').then((m) => ({ default: m.TogetherModeModal })));
+const LoungeModal = lazy(() => import('./components/lounge/LoungeModal').then((m) => ({ default: m.LoungeModal })));
+const CompanionLifeModal = lazy(() => import('./components/lifesim/CompanionLifeModal').then((m) => ({ default: m.CompanionLifeModal })));
+const CBTDebriefModal = lazy(() => import('./components/cbt/CBTDebriefModal').then((m) => ({ default: m.CBTDebriefModal })));
+const AuthModal = lazy(() => import('./components/auth/AuthModal').then((m) => ({ default: m.AuthModal })));
+
+type Dialog = 'auth' | 'vault' | 'voice' | 'paywall' | 'moments' | 'stories' | 'analytics' | 'letters' | 'together' | 'lounge' | 'life' | 'cbt';
 
 export function App() {
+  const [dialog, setDialog] = useState<Dialog | null>(null);
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [activePersona, setActivePersona] = useState<Persona | null>(null);
   const [relationships, setRelationships] = useState<Record<string, Relationship>>({});
   const [messages, setMessages] = useState<Message[]>([]);
   const [facts, setFacts] = useState<UserFact[]>([]);
   const [memories, setMemories] = useState<EpisodicMemory[]>([]);
+  const [billingStatus, setBillingStatus] = useState<BillingStatus | null>(null);
+
+  const [currentUser, setCurrentUser] = useState<{ id: string; email: string; display_name: string } | null>(() => api.getCurrentUser());
 
   const [currentView, setCurrentView] = useState<'roster' | 'chat'>('roster');
-  const [isVaultOpen, setIsVaultOpen] = useState(false);
-  const [isVoiceOpen, setIsVoiceOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     try {
       const saved = localStorage.getItem('persona_theme');
@@ -30,33 +46,31 @@ export function App() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingToken, setStreamingToken] = useState('');
 
-  // Synchronize dark mode class on document
+  // Keep the persisted preference and document theme in sync.
   useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-      try {
-        localStorage.setItem('persona_theme', 'dark');
-      } catch {}
-    } else {
-      document.documentElement.classList.remove('dark');
-      try {
-        localStorage.setItem('persona_theme', 'light');
-      } catch {}
+    document.documentElement.classList.toggle('dark', isDarkMode);
+    try {
+      localStorage.setItem('persona_theme', isDarkMode ? 'dark' : 'light');
+    } catch {
+      // Private browsing can disable persistent storage.
     }
   }, [isDarkMode]);
 
-  // Load initial personas
+  // Load initial personas and billing status
   useEffect(() => {
     async function init() {
       const loadedPersonas = await api.getPersonas();
       setPersonas(loadedPersonas);
 
       // Load relationships for all personas
-      const relMap: Record<string, Relationship> = {};
-      for (const p of loadedPersonas) {
-        relMap[p.id] = await api.getRelationship(p.id);
-      }
-      setRelationships(relMap);
+      const entries = await Promise.all(loadedPersonas.map(async (persona) => (
+        [persona.id, await api.getRelationship(persona.id)] as const
+      )));
+      setRelationships(Object.fromEntries(entries));
+
+      // Load initial billing status
+      const billing = await api.getBillingStatus();
+      setBillingStatus(billing);
 
       // Set first persona as default active
       if (loadedPersonas.length > 0) {
@@ -157,6 +171,22 @@ export function App() {
     handleSelectPersona(created);
   };
 
+  const handleImportCard = async (cardData: any) => {
+    const imported = await api.importCharacterCard(cardData);
+    const updatedList = await api.getPersonas();
+    setPersonas(updatedList);
+    const rel = await api.getRelationship(imported.id);
+    setRelationships((prev) => ({ ...prev, [imported.id]: rel }));
+    handleSelectPersona(imported);
+  };
+
+  const handleUpgrade = async (tier: 'plus' | 'vip', period: 'monthly' | 'yearly') => {
+    await api.createCheckoutSession(tier, period);
+    const updated = await api.getBillingStatus();
+    setBillingStatus(updated);
+    setDialog(null);
+  };
+
   const currentRelationship = activePersona
     ? relationships[activePersona.id] || {
         persona_id: activePersona.id,
@@ -168,17 +198,45 @@ export function App() {
       }
     : null;
 
+  const handleLoginSuccess = async (user: { id: string; email: string; display_name: string }) => {
+    setCurrentUser(user);
+    // Reload personas and state for newly authenticated user
+    const loadedPersonas = await api.getPersonas();
+    setPersonas(loadedPersonas);
+    if (loadedPersonas.length > 0) {
+      handleSelectPersona(loadedPersonas[0]);
+    }
+  };
+
+  const handleLogout = () => {
+    api.logout();
+    setCurrentUser(null);
+  };
+
   return (
     <div className="min-h-[100dvh] flex flex-col bg-[#FAF8F5] text-[#141312] dark:bg-[#121211] dark:text-[#FAF8F5] transition-colors duration-200">
       {/* Floating Navigation Island */}
       <Header
         activePersona={currentView === 'chat' ? activePersona : null}
-        onOpenVault={() => setIsVaultOpen(true)}
-        onOpenVoice={() => setIsVoiceOpen(true)}
+        currentUser={currentUser}
+        onOpenAuth={() => setDialog('auth')}
+        onLogout={handleLogout}
+        onOpenVault={() => setDialog('vault')}
+        onOpenVoice={() => setDialog('voice')}
+        onOpenPaywall={() => setDialog('paywall')}
+        onOpenMoments={() => setDialog('moments')}
+        onOpenStories={() => setDialog('stories')}
+        onOpenAnalytics={() => setDialog('analytics')}
+        onOpenLetters={() => setDialog('letters')}
+        onOpenTogether={() => setDialog('together')}
+        onOpenLounge={() => setDialog('lounge')}
+        onOpenLifeSim={() => setDialog('life')}
+        onOpenCBT={() => setDialog('cbt')}
         onSelectPersonas={() => setCurrentView('roster')}
         isDarkMode={isDarkMode}
         onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
         factCount={facts.length}
+        subscriptionTier={billingStatus?.subscription_tier || 'free'}
       />
 
       {/* Main View Area */}
@@ -189,6 +247,7 @@ export function App() {
             relationships={relationships}
             onSelectPersona={handleSelectPersona}
             onCreatePersona={handleCreatePersona}
+            onImportCard={handleImportCard}
           />
         ) : (
           <ChatInterface
@@ -202,27 +261,114 @@ export function App() {
         )}
       </main>
 
-      {/* Ambient Voice Call Modal */}
-      {activePersona && (
-        <AmbientVoiceModal
-          isOpen={isVoiceOpen}
-          onClose={() => setIsVoiceOpen(false)}
-          persona={activePersona}
-        />
-      )}
+      {/* Mount dialogs only while open. */}
+      <Suspense fallback={null}>
+        {dialog === 'auth' && (
+          <AuthModal
+            isOpen={dialog === 'auth'}
+            onClose={() => setDialog(null)}
+            onSuccess={handleLoginSuccess}
+          />
+        )}
 
-      {/* Memory Vault Modal */}
-      {activePersona && (
-        <MemoryVaultModal
-          isOpen={isVaultOpen}
-          onClose={() => setIsVaultOpen(false)}
-          persona={activePersona}
-          facts={facts}
-          memories={memories}
-          onDeleteFact={handleDeleteFact}
-          onAddFact={handleAddFact}
-        />
-      )}
+        {dialog === 'lounge' && (
+          <LoungeModal
+            isOpen={dialog === 'lounge'}
+            onClose={() => setDialog(null)}
+            personas={personas}
+          />
+        )}
+
+        {dialog === 'life' && activePersona && (
+          <CompanionLifeModal
+            isOpen={dialog === 'life'}
+            onClose={() => setDialog(null)}
+            persona={activePersona}
+          />
+        )}
+
+        {dialog === 'cbt' && activePersona && (
+          <CBTDebriefModal
+            isOpen={dialog === 'cbt'}
+            onClose={() => setDialog(null)}
+            persona={activePersona}
+          />
+        )}
+
+        {dialog === 'letters' && activePersona && (
+          <LettersModal
+            isOpen={dialog === 'letters'}
+            onClose={() => setDialog(null)}
+            persona={activePersona}
+          />
+        )}
+
+        {dialog === 'together' && activePersona && (
+          <TogetherModeModal
+            isOpen={dialog === 'together'}
+            onClose={() => setDialog(null)}
+            persona={activePersona}
+          />
+        )}
+
+        {dialog === 'moments' && activePersona && (
+          <MomentsGalleryModal
+            isOpen={dialog === 'moments'}
+            onClose={() => setDialog(null)}
+            persona={activePersona}
+          />
+        )}
+
+        {dialog === 'stories' && (
+          <StoriesFeedModal
+            isOpen={dialog === 'stories'}
+            onClose={() => setDialog(null)}
+            onReplyToStory={(personaId, reply) => {
+              const target = personas.find((p) => p.id === personaId) || activePersona;
+              if (target) {
+                handleSelectPersona(target);
+                handleSendMessage(reply);
+              }
+            }}
+          />
+        )}
+
+        {dialog === 'analytics' && (
+          <AnalyticsDashboardModal
+            isOpen={dialog === 'analytics'}
+            onClose={() => setDialog(null)}
+          />
+        )}
+
+        {dialog === 'voice' && activePersona && (
+          <AmbientVoiceModal
+            isOpen={dialog === 'voice'}
+            onClose={() => setDialog(null)}
+            persona={activePersona}
+          />
+        )}
+
+        {dialog === 'vault' && activePersona && (
+          <MemoryVaultModal
+            isOpen={dialog === 'vault'}
+            onClose={() => setDialog(null)}
+            persona={activePersona}
+            facts={facts}
+            memories={memories}
+            onDeleteFact={handleDeleteFact}
+            onAddFact={handleAddFact}
+          />
+        )}
+
+        {dialog === 'paywall' && (
+          <PaywallModal
+            isOpen={dialog === 'paywall'}
+            onClose={() => setDialog(null)}
+            billingStatus={billingStatus}
+            onUpgrade={handleUpgrade}
+          />
+        )}
+      </Suspense>
     </div>
   );
 }

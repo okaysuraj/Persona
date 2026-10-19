@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Colors } from '../../constants/theme';
-import { Relationship } from '../../store/companionStore';
+import type { Relationship } from '../../types';
 
 interface IntimacyGaugeProps {
   relationship?: Relationship | null;
