@@ -1,6 +1,6 @@
 # Persona
 
-Persona has a FastAPI backend, a React web app, and an Expo mobile app. PostgreSQL runs in Docker; start the backend and clients manually. Both clients use `/api/v1` on the same backend. The web app and several mobile screens keep their existing demo content when the backend is unavailable.
+Persona is a mobile-only personal AI companion (iOS & Android via Expo React Native) powered by a FastAPI backend and pgvector database, with a React web landing page. The application experience lives entirely on mobile, while the web frontend serves as the public landing page, interactive device preview, and beta waitlist. The mobile app keeps its rich demo content when the backend is unavailable.
 
 ## Run locally
 
@@ -75,12 +75,12 @@ backend/app/
   workers/             Scheduled companion check-ins
 
 frontend/src/
-  App.tsx              Page and dialog composition
-  components/          Feature UI and shared controls
-  services/api.ts      Public API entry point for components
-  services/            Feature operations, HTTP transport, browser storage
-  data/demo.ts         Offline starter content
-  types/               Shared web types
+  App.tsx              Landing page composition and theme state
+  components/landing/  Editorial landing page sections & interactive phone demo
+  components/ui/       Design system primitives (Button, DoubleBezelCard)
+  services/waitlist.ts Mobile beta waitlist and invite code generation
+  data/demo.ts         Curated companion profile starter content
+  types/               Shared data types
 
 mobile/
   app/                 Expo Router screens and navigation
